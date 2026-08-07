@@ -1,0 +1,928 @@
+<!--
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    SCREENING ENGINE — FRONTEND UI                          ║
+║                                                                            ║
+║  Single-page application with 3-tab navigation:                            ║
+║    🏠 Dashboard    — IHSG live data + top gainers/losers + market overview ║
+║    📊 Rekomendasi  — Batch screening of 12+ stocks ranked by score         ║
+║    ⏰ Backtest     — Historical time-machine validation                    ║
+║                                                                            ║
+║  Plus inline search: type a stock code → full analysis + candlestick chart ║
+║                                                                            ║
+║  Dependencies:                                                             ║
+║    - TradingView Lightweight Charts v4.1.3 (CDN)                           ║
+║    - Vanilla HTML/CSS/JS (no framework)                                    ║
+║    - Backend API at /api/* (FastAPI server)                                ║
+║                                                                            ║
+║  Author: Attaboy473                                                        ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+-->
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Screening Engine — Screener + Backtest</title>
+<!-- TradingView chart library -->
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   GLOBAL RESET & BASE
+   ══════════════════════════════════════════════════════════════════════════ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: #f5f5f5;
+  color: #1a1a1a;
+  min-height: 100vh;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TOP NAVIGATION BAR
+   Flexbox row: logo | tabs | search — all centered as one group
+   ══════════════════════════════════════════════════════════════════════════ */
+.topbar {
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+  padding: 8px 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.03);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.logo { font-size: 15px; font-weight: 700; color: #059669; flex: 0 0 105px; text-align: left; }
+.nav-tabs { display: flex; align-items: center; justify-content: center; gap: 4px; flex: 0 0 auto; }
+
+/* Tab buttons */
+.tab-btn {
+  padding: 8px 14px; background: none; border: none; border-radius: 6px;
+  cursor: pointer; font-size: 12px; font-weight: 600; color: #666;
+  font-family: inherit; transition: all .12s; white-space: nowrap;
+}
+.tab-btn:hover { color: #059669; background: #f0fdf4; }
+.tab-btn.active { color: #059669; background: #f0fdf4; }
+
+/* Search "Analisis Per Emiten" */
+.search-wrap { flex: 0 0 260px; }
+.search-wrap input {
+  width: 100%; padding: 8px 12px; border: 1.5px solid #d4d4d4;
+  border-radius: 7px; font-size: 12px; font-family: inherit; outline: none;
+}
+.search-wrap input:focus { border-color: #059669; }
+
+/* Responsive: stack on small screens */
+@media (max-width: 720px) {
+  .topbar { flex-wrap: wrap; gap: 6px 10px; }
+  .logo { flex-basis: auto; }
+  .search-wrap { flex-basis: 230px; }
+  .nav-tabs { order: 3; width: 100%; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MAIN CONTENT AREA
+   ══════════════════════════════════════════════════════════════════════════ */
+main { max-width: 1200px; margin: 0 auto; padding: 10px 16px; }
+.loading { text-align: center; padding: 60px 20px; color: #999; }
+.spinner {
+  display: inline-block; width: 28px; height: 28px; border: 3px solid #e5e5e5;
+  border-top-color: #059669; border-radius: 50%; animation: spin .6s linear infinite;
+  margin-bottom: 10px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.error {
+  background: #fef2f2; border: 1px solid #fecaca; color: #dc2626;
+  border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; font-size: 12px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DASHBOARD — IHSG Card, Chart, Gainers/Losers
+   ══════════════════════════════════════════════════════════════════════════ */
+.ihsg-card {
+  background: #fff; border: 1px solid #e5e5e5; border-radius: 8px;
+  padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+  margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,.03);
+}
+.ihsg-card .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.dg { background: #059669; } .dy { background: #f59e0b; } .dr { background: #dc2626; }
+.ihsg-info { flex: 1; }
+.ihsg-info .label { font-size: 9px; color: #999; text-transform: uppercase; letter-spacing: .1em; font-weight: 600; }
+.ihsg-info .price { font-size: 22px; font-weight: 800; color: #111; line-height: 1.2; }
+.ihsg-info .change { font-size: 12px; font-weight: 600; }
+.up { color: #059669; } .down { color: #dc2626; }
+.ihsg-status { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.st-pill { display: inline-block; padding: 3px 10px; border-radius: 5px; font-size: 10px; font-weight: 700; }
+.pg { background: #f0fdf4; color: #059669; }
+.py { background: #fffbeb; color: #d97706; }
+.pr { background: #fef2f2; color: #dc2626; }
+
+/* Dashboard grid: chart left, gainers/losers right */
+.dash-grid { display: grid; grid-template-columns: 1fr 340px; gap: 10px; align-items: start; }
+@media(max-width:900px){ .dash-grid{grid-template-columns:1fr;} }
+#ihsgChart { width:100%; height:260px; }
+.ihsg-chart-card {
+  background: #fff; border: 1px solid #e5e5e5; border-radius: 8px;
+  overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.03);
+}
+.ihsg-chart-header {
+  padding: 7px 14px; font-weight: 700; font-size: 11px;
+  color: #666; border-bottom: 1px solid #f0f0f0;
+}
+
+/* Mover cards (gainers/losers) */
+.m-card {
+  background: #fff; border: 1px solid #e5e5e5; border-radius: 8px;
+  overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.03);
+  display: flex; flex-direction: column;
+}
+.m-header { padding: 7px 12px; font-weight: 700; font-size: 10px; display: flex; align-items: center; gap: 5px; }
+.gh { background: #f0fdf4; color: #059669; }
+.lh { background: #fef2f2; color: #dc2626; }
+.m-row {
+  display: flex; align-items: center; padding: 5px 12px;
+  border-bottom: 1px solid #f5f5f5; cursor: pointer; font-size: 11px;
+}
+.m-row:hover { background: #fafafa; }
+.m-row .mk { font-weight: 700; flex: 1; min-width: 0; }
+.m-row .mc { flex: 0 0 72px; font-weight: 700; text-align: center; }
+.m-row .mp { flex: 1; color: #888; font-size: 10px; text-align: right; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SCORE DISPLAY (Analisis Per Emiten)
+   ══════════════════════════════════════════════════════════════════════════ */
+.summary-card {
+  background: #fff; border: 1px solid #e5e5e5; border-radius: 8px;
+  padding: 18px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,.03);
+}
+.sum-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.sum-left h2 { font-size: 20px; font-weight: 700; }
+.sum-left .price { font-size: 26px; font-weight: 800; color: #111; margin-top: 1px; }
+.sum-left .change { font-size: 11px; font-weight: 600; }
+
+/* Recommendation badges */
+.badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; color: #fff; }
+.bs { background: #059669; } .bb { background: #0ea5e9; }
+.bh { background: #f59e0b; } .bw { background: #f97316; } .ba { background: #dc2626; }
+.grade-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; border: 2px solid; }
+.ga { border-color: #059669; color: #059669; }
+.gb { border-color: #0ea5e9; color: #0ea5e9; }
+.gc { border-color: #f59e0b; color: #f59e0b; }
+.gd { border-color: #dc2626; color: #dc2626; }
+
+/* Score bars */
+.score-section {
+  background: #f9fafb; border: 1px solid #e5e5e5; border-radius: 8px;
+  padding: 14px 18px; margin-top: 10px;
+}
+.total-row { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #e5e5e5; }
+.total-row .tl { font-size: 11px; color: #888; font-weight: 600; }
+.total-row .tn { font-size: 32px; font-weight: 800; line-height: 1; }
+.total-row .tm { font-size: 14px; color: #aaa; font-weight: 500; }
+
+/* Individual lane bars (Teknikal, Momentum, Fundamental) */
+.bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+.bar-label { min-width: 90px; font-size: 11px; font-weight: 600; }
+.bar-bg { flex: 1; height: 12px; background: #ececec; border-radius: 6px; overflow: hidden; }
+.bar-fill {
+  height: 100%; border-radius: 6px; transition: width .6s ease;
+  display: flex; align-items: center; justify-content: flex-end; padding-right: 8px;
+}
+.bar-fill .ft { font-size: 9px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.2); }
+.bar-num { min-width: 38px; text-align: right; font-size: 13px; font-weight: 800; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TRADING PLAN SECTION
+   ══════════════════════════════════════════════════════════════════════════ */
+.tp-section {
+  background: #fafcff; border: 1px solid #dbeafe; border-radius: 8px;
+  padding: 16px 18px; margin-top: 10px;
+}
+.tp-header {
+  font-size: 13px; font-weight: 700; color: #1d4ed8;
+  margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #dbeafe;
+}
+.tp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.tp-item { background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 8px 10px; border-left: 3px solid #ccc; }
+.tp-e { border-left-color: #0ea5e9; }  /* Entry */
+.tp-re { border-left-color: #1d4ed8; } /* Range entry */
+.tp-sl { border-left-color: #dc2626; } /* Stop loss */
+.tp-1 { border-left-color: #059669; }  /* TP1 */
+.tp-2 { border-left-color: #059669; }  /* TP2 */
+.tp-3 { border-left-color: #8b5cf6; }  /* TP3 */
+.tp-l { font-size: 10px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: .06em; }
+.tp-v { font-size: 14px; font-weight: 800; color: #111; margin-top: 2px; }
+.tp-s { font-size: 9px; color: #999; margin-top: 2px; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CANDLESTICK CHART
+   ══════════════════════════════════════════════════════════════════════════ */
+.chart-card {
+  background: #fff; border: 1px solid #e5e5e5; border-radius: 8px;
+  margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,.03); overflow: hidden;
+}
+.chart-card-header {
+  padding: 8px 14px; font-weight: 700; font-size: 11px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.chart-tf { display: flex; gap: 3px; }
+.chart-tf button {
+  padding: 2px 7px; font-size: 9px; border: 1px solid #d4d4d4;
+  background: #fff; border-radius: 3px; cursor: pointer; color: #666;
+}
+.chart-tf button.active { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+#chartContainer { width: 100%; height: 380px; }
+
+/* Indicator detail cards (3-column grid) */
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-bottom: 10px; }
+.detail-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+.detail-card-header {
+  padding: 8px 12px; font-weight: 700; font-size: 11px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid #f0f0f0;
+}
+.detail-card-header .ds { font-size: 16px; font-weight: 800; }
+.dct { background: #eff6ff; color: #1d4ed8; } /* Teknikal */
+.dcm { background: #fffbeb; color: #b45309; } /* Momentum */
+.dcf { background: #f0fdf4; color: #15803d; } /* Fundamental */
+.detail-table { width: 100%; border-collapse: collapse; }
+.detail-table td { padding: 5px 10px; font-size: 10px; border-bottom: 1px solid #f5f5f5; }
+.sb { color: #059669; } .sw { color: #f59e0b; } .sx { color: #dc2626; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   REKOMENDASI (BATCH SCREENING)
+   ══════════════════════════════════════════════════════════════════════════ */
+.result-list { display: flex; flex-direction: column; gap: 6px; max-width: 980px; margin: 0 auto; }
+.rs-card {
+  background: #fff; border: 1px solid #e5e5e5; border-radius: 8px;
+  padding: 10px 18px; display: flex; align-items: center; gap: 0;
+  cursor: pointer; transition: all .12s; box-shadow: 0 1px 2px rgba(0,0,0,.03);
+}
+.rs-card:hover { border-color: #059669; }
+
+/* Fixed-width columns for vertical alignment */
+.rs-kode { font-weight: 700; font-size: 13px; width: 68px; flex-shrink: 0; }
+.rs-score { font-size: 14px; font-weight: 800; width: 52px; flex-shrink: 0; text-align: center; }
+.rs-rec { width: 108px; flex-shrink: 0; text-align: center; }
+.rs-price { color: #666; font-size: 11px; width: 142px; flex-shrink: 0; text-align: right; padding-right: 18px; }
+.rs-bd { font-size: 10px; color: #888; flex: 1; }
+.rs-g { width: 78px; flex-shrink: 0; display: flex; justify-content: center; padding-left: 14px; }
+.rs-grade { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; border: 1.5px solid; white-space: nowrap; }
+.rs-grade .gr { font-size: 7px; font-weight: 500; text-transform: uppercase; letter-spacing: .03em; opacity: .7; }
+
+/* Mini segmented bar showing Teknikal/Momentum/Fundamental proportion */
+.mini-bars { display: flex; gap: 3px; flex: 1; max-width: 210px; height: 10px; margin: 0 18px; }
+.mini-bar-seg { height: 100%; border-radius: 2px; }
+
+/* Quick stock tag buttons */
+.quick-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.quick-btns button {
+  padding: 5px 12px; border: 1px solid #d4d4d4; background: #fff;
+  border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 500;
+  color: #555; font-family: inherit; transition: all .12s;
+}
+.quick-btns button:hover { border-color: #059669; color: #059669; background: #f0fdf4; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BACKTEST
+   ══════════════════════════════════════════════════════════════════════════ */
+.bt-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.bt-controls select {
+  padding: 7px 14px; border: 1.5px solid #d4d4d4; border-radius: 7px;
+  font-size: 13px; font-family: inherit; background: #fff; cursor: pointer;
+}
+.bt-controls select:focus { border-color: #059669; outline: none; }
+.btn-screen, .btn-ff {
+  padding: 7px 14px; border: none; border-radius: 7px;
+  cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; transition: all .12s;
+}
+.btn-screen { background: #059669; color: #fff; }
+.btn-screen:hover { background: #047857; }
+.btn-ff { background: #1d4ed8; color: #fff; }
+.btn-ff:hover { background: #1e40af; }
+.btn-ff:disabled { background: #aaa; cursor: not-allowed; }
+
+.bt-summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.bt-stat {
+  background: #fff; border: 1px solid #e5e5e5; border-radius: 8px;
+  padding: 10px 16px; flex: 1; min-width: 130px; box-shadow: 0 1px 2px rgba(0,0,0,.03);
+}
+.bt-stat .bts-l { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: .06em; }
+.bt-stat .bts-v { font-size: 18px; font-weight: 800; margin-top: 2px; }
+
+/* Backtest result table */
+.bt-table-wrap {
+  background: #fff; border: 1px solid #e5e5e5; border-radius: 10px;
+  overflow-x: auto; box-shadow: 0 1px 3px rgba(0,0,0,.03); margin-bottom: 10px;
+}
+.bt-table-wrap table { width: 100%; border-collapse: collapse; min-width: 800px; }
+.bt-table-wrap th {
+  background: #f9fafb; font-size: 9px; font-weight: 600; color: #666;
+  text-transform: uppercase; letter-spacing: .04em;
+  padding: 8px 5px; text-align: center; border-bottom: 1px solid #e5e5e5;
+}
+.bt-table-wrap td { padding: 7px 5px; font-size: 10px; border-bottom: 1px solid #f0f0f0; text-align: center; }
+.bt-table-wrap tr:last-child td { border-bottom: none; }
+.bw td { background: #f0fdf4 !important; }   /* Win row (green tint) */
+.bl td { background: #fef2f2 !important; }   /* Lose row (red tint) */
+.tp-hit { display: inline-block; background: #dcfce7; color: #059669; font-weight: 700; padding: 1px 6px; border-radius: 3px; font-size: 9px; }
+.tp-miss { display: inline-block; background: #fef2f2; color: #dc2626; padding: 1px 6px; border-radius: 3px; font-size: 9px; }
+.tooltip { font-size: 10px; color: #999; font-style: italic; text-align: center; margin-top: 6px; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MARKET OVERVIEW (Dashboard)
+   ══════════════════════════════════════════════════════════════════════════ */
+.overview-card {
+  background: #fff; border: 1px solid #e5e5e5; border-radius: 8px;
+  padding: 14px 18px; margin: 10px 0; box-shadow: 0 1px 2px rgba(0,0,0,.03);
+}
+.ov-header { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e5e5; }
+.ov-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.ov-item { background: #f9fafb; border: 1px solid #e5e5e5; border-radius: 6px; padding: 10px 14px; }
+.ov-item .ovl { font-size: 10px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+.ov-item .ovv { font-size: 12px; font-weight: 700; color: #1a1a1a; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<div class="topbar">
+  <span class="logo">Screening Engine</span>
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('dashboard')">🏠 Dashboard</button>
+    <button class="tab-btn" onclick="switchTab('rekomendasi')">📊 Rekomendasi</button>
+    <button class="tab-btn" onclick="switchTab('backtest')">⏰ Backtest</button>
+  </div>
+  <div class="search-wrap">
+    <input type="text" id="searchInput" placeholder="Analisis Per Emiten... BBCA" onkeydown="if(event.key==='Enter')searchGo()">
+  </div>
+</div>
+
+<!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+<main id="main"></main>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════
+// GLOBAL STATE
+// ══════════════════════════════════════════════════════════════════════════
+const API = '';
+const POPULAR = ['BBCA','BBRI','BMRI','TLKM','ASII','BBNI','UNVR','GOTO','ANTM','ADRO','ICBP','MDKA'];
+let currentTab  = 'dashboard';
+let currentChart = null;
+let currentKode  = null;
+let ihsgChart    = null;
+let btData       = null;
+let btShowing    = false;
+
+// ══════════════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  currentTab = tab;
+  // Toggle active button
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const names = {dashboard:'Dashboard', rekomendasi:'Rekomendasi', backtest:'Backtest'};
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    if (b.textContent.includes(names[tab])) b.classList.add('active');
+  });
+  // Show loading and route
+  document.getElementById('main').innerHTML = '<div class="loading"><div class="spinner"></div><p>Memuat...</p></div>';
+  if (tab === 'dashboard')     loadDashboard();
+  else if (tab === 'rekomendasi') loadRekomendasi();
+  else if (tab === 'backtest')  initBacktest();
+}
+
+// Search from input bar → opens stock analysis directly
+function searchGo() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) return;
+  searchSingle(q);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// 🏠 DASHBOARD
+// ══════════════════════════════════════════════════════════════════════════
+async function loadDashboard() {
+  document.getElementById('main').innerHTML = '<div class="loading"><div class="spinner"></div><p>Memuat data pasar...</p></div>';
+  try {
+    const r = await fetch(`${API}/api/ihsg`);
+    const d = await r.json();
+    if (!d.ok) { document.getElementById('main').innerHTML = `<div class="error">⚠️ ${d.error}</div>`; return; }
+    renderDashboard(d);
+  } catch(e) { document.getElementById('main').innerHTML = '<div class="error">⚠️ Gagal terhubung</div>'; }
+}
+
+function renderDashboard(d) {
+  const ih = d.ihsg;
+  const cc = ih.change_pct >= 0 ? '#059669' : '#dc2626';
+  const cs = ih.change_pct >= 0 ? '+' : '';
+
+  // Determine status color
+  let dot = 'dr', pill = 'pr';
+  if (ih.status.includes('Hijau'))      { dot = 'dg'; pill = 'pg'; }
+  else if (ih.status.includes('Kuning')) { dot = 'dy'; pill = 'py'; }
+
+  // Build gainer/loser rows with sector info
+  const gh = d.gainers.map(g =>
+    `<div class="m-row" onclick="searchSingle('${g.kode}')">
+      <span class="mk">${g.kode} <span style="font-weight:400;font-size:10px;color:#666;">(${g.sector||'—'})</span></span>
+      <span class="mc" style="color:#059669">+${g.change_pct}%</span>
+      <span class="mp">Rp${g.harga.toLocaleString('id-ID')}</span>
+    </div>`
+  ).join('') || '<div style="padding:12px;text-align:center;color:#999;font-size:11px;">—</div>';
+
+  const lh = d.losers.map(l =>
+    `<div class="m-row" onclick="searchSingle('${l.kode}')">
+      <span class="mk">${l.kode} <span style="font-weight:400;font-size:10px;color:#666;">(${l.sector||'—'})</span></span>
+      <span class="mc" style="color:#dc2626">${l.change_pct}%</span>
+      <span class="mp">Rp${l.harga.toLocaleString('id-ID')}</span>
+    </div>`
+  ).join('') || '<div style="padding:12px;text-align:center;color:#999;font-size:11px;">—</div>';
+
+  document.getElementById('main').innerHTML = `
+    <div class="dash-grid">
+      <div>
+        <div class="ihsg-card">
+          <div class="dot ${dot}"></div>
+          <div class="ihsg-info">
+            <div class="label">IHSG</div>
+            <div class="price">${ih.harga.toLocaleString('id-ID')} <span class="change" style="color:${cc}">${cs}${ih.change_pct}%</span></div>
+          </div>
+          <div class="ihsg-status">
+            <span class="st-pill ${pill}">${ih.status}</span>
+            <div style="font-size:10px;color:#888;">MA20 <b>${ih.ma20.toLocaleString('id-ID')}</b> · MA50 <b>${ih.ma50.toLocaleString('id-ID')}</b> · RSI <b>${ih.rsi}</b></div>
+          </div>
+        </div>
+        <div class="ihsg-chart-card">
+          <div class="ihsg-chart-header">Grafik IHSG — 1 Tahun</div>
+          <div id="ihsgChart"></div>
+        </div>
+        ${renderOverview(ih)}
+      </div>
+      <div>
+        <div class="m-card" style="margin-bottom:10px;">
+          <div class="m-header gh">🟢 Top Gainers</div>
+          <div style="overflow-y:auto">${gh}</div>
+        </div>
+        <div class="m-card">
+          <div class="m-header lh">🔴 Top Losers</div>
+          <div style="overflow-y:auto">${lh}</div>
+        </div>
+      </div>
+    </div>
+    <div class="tooltip">Data Yahoo Finance · delay 15 menit</div>`;
+  if (d.ihsg_chart && d.ihsg_chart.length) setTimeout(() => renderIhsgChart(d.ihsg_chart), 100);
+}
+
+function renderOverview(ih) {
+  const ov = ih.overview;
+  if (!ov) return '';
+  return `<div class="overview-card">
+    <div class="ov-header">📊 Market Overview</div>
+    <div class="ov-grid">
+      <div class="ov-item"><div class="ovl">📈 Market Breadth</div><div class="ovv">${ov.breadth||'—'}</div></div>
+      <div class="ov-item"><div class="ovl">💱 Foreign Flow</div><div class="ovv">${ov.foreign||'—'}</div></div>
+      <div class="ov-item"><div class="ovl">🧭 Market Sentiment</div><div class="ovv">${ov.sentiment||'—'}</div></div>
+      <div class="ov-item"><div class="ovl">📐 Technical Outlook</div><div class="ovv">${ov.technical||'—'}</div></div>
+    </div></div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// IHSG CHART (TradingView Lightweight Charts)
+// ══════════════════════════════════════════════════════════════════════════
+function renderIhsgChart(data) {
+  const c = document.getElementById('ihsgChart');
+  if (!c) return;
+  if (ihsgChart) { ihsgChart.remove(); ihsgChart = null; }
+  ihsgChart = LightweightCharts.createChart(c, {
+    layout: { background: { color: '#ffffff' }, textColor: '#333' },
+    grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } },
+    rightPriceScale: { borderColor: '#e0e0e0', scaleMargins: { top: .05, bottom: .05 } },
+    timeScale: { borderColor: '#e0e0e0', timeVisible: false },
+  });
+  const area = ihsgChart.addAreaSeries({
+    lineColor: '#059669', topColor: 'rgba(5,150,105,0.12)',
+    bottomColor: 'rgba(5,150,105,0.01)', lineWidth: 2,
+  });
+  area.setData(data.map(d => ({ time: d.time, value: d.close })));
+  // Overlay MA20 and MA50
+  const m20 = MA(data, 20);
+  if (m20.length) ihsgChart.addLineSeries({ color: '#1d4ed8', lineWidth: 1, lastValueVisible: false }).setData(m20);
+  const m50 = MA(data, 50);
+  if (m50.length) ihsgChart.addLineSeries({ color: '#f59e0b', lineWidth: 1, lastValueVisible: false }).setData(m50);
+  ihsgChart.timeScale().fitContent();
+}
+
+// Calculate Simple Moving Average from OHLCV data
+function MA(data, period) {
+  const r = [];
+  for (let i = period - 1; i < data.length; i++) {
+    let s = 0;
+    for (let j = 0; j < period; j++) s += data[i - j].close;
+    r.push({ time: data[i].time, value: s / period });
+  }
+  return r;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// 🔍 STOCK ANALYSIS (Analisis Per Emiten)
+// ══════════════════════════════════════════════════════════════════════════
+async function searchSingle(kode) {
+  currentKode = kode.toUpperCase().trim();
+  document.getElementById('searchInput').value = currentKode;
+  document.getElementById('main').innerHTML = `<div class="loading"><div class="spinner"></div><p>Menganalisis ${currentKode}...</p></div>`;
+  try {
+    // Fetch score + chart data in parallel
+    const [sr, cr] = await Promise.all([
+      fetch(`${API}/api/score/${currentKode}`),
+      fetch(`${API}/api/chart/${currentKode}?period=6mo`),
+    ]);
+    const sd = await sr.json();
+    if (!sd.ok) { document.getElementById('main').innerHTML = `<div class="error">⚠️ ${sd.error}</div>`; return; }
+    const cd = await cr.json();
+    renderAnalisis(sd.data);
+    if (cd.ok) renderChart(cd.data);
+  } catch(e) { document.getElementById('main').innerHTML = '<div class="error">⚠️ Gagal terhubung</div>'; }
+}
+
+function renderAnalisis(d) {
+  const cc = d.change_1d >= 0 ? 'up' : 'down';
+  const cs = d.change_1d >= 0 ? '+' : '';
+  const s5 = d.change_5d >= 0 ? '+' : '';
+
+  // Map recommendations → CSS classes
+  const rcMap = {'STRONG BUY':'bs','BUY':'bb','HOLD':'bh','WATCH':'bw','AVOID':'ba'};
+  const gcMap = {'A':'ga','B':'gb','C':'gc','D':'gd'};
+
+  // Range entry string
+  const rng = (d.entry_bawah && d.entry_atas)
+    ? `Rp${d.entry_bawah.toLocaleString('id-ID')} – Rp${d.entry_atas.toLocaleString('id-ID')}`
+    : '—';
+
+  // Score color and threshold label
+  const total = d.score;
+  const tc = total >= 80 ? '#059669' : total >= 63 ? '#0ea5e9' : total >= 47 ? '#f59e0b' : '#dc2626';
+  const labels = ['Sangat Baik','Baik','Netral','Buruk','Jelek'];
+  const labelIdx = total >= 80 ? 0 : total >= 63 ? 1 : total >= 47 ? 2 : total >= 30 ? 3 : 4;
+  const labelCols = ['#059669','#0ea5e9','#f59e0b','#f97316','#dc2626'];
+  const threshold = 'Sangat Baik ≥80  ·  Baik 63–79  ·  Netral 47–62  ·  Buruk 30–46  ·  Jelek <30';
+
+  document.getElementById('main').innerHTML = `
+    <div class="summary-card">
+      <div class="sum-top">
+        <div class="sum-left">
+          <h2>${d.kode} <span style="font-size:10px;color:#888;">· ${d.sector}</span></h2>
+          <div class="price">Rp${d.harga.toLocaleString('id-ID')}</div>
+          <div class="change ${cc}">${cs}${d.change_1d.toFixed(2)}% hari ini · ${s5}${d.change_5d.toFixed(2)}% 5 hari</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="badge ${rcMap[d.rec]}">${d.rec}</span>
+          <span class="grade-badge ${gcMap[d.grade]}">Grade ${d.grade}</span>
+        </div>
+      </div>
+
+      <!-- Score Bars in 0–100 scale -->
+      <div class="score-section">
+        <div class="total-row">
+          <span class="tl">Skor Total</span>
+          <span class="tn" style="color:${tc}">${total}</span>
+          <span class="tm">/ 100</span>
+          <span style="font-size:11px;font-weight:600;color:${labelCols[labelIdx]}">${labels[labelIdx]}</span>
+        </div>
+        <div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:8px;">${threshold}</div>
+        ${renderBar('🔵 Teknikal', d.tek_score, '#1d4ed8', '#dbeafe')}
+        ${renderBar('🟠 Momentum', d.mom_score, '#d97706', '#fef3c7')}
+        ${renderBar('🟢 Fundamental', d.fun_score, '#059669', '#dcfce7')}
+      </div>
+
+      <!-- Trading Plan — ATR-based Conservative -->
+      <div class="tp-section">
+        <div class="tp-header">🎯 Trading Plan — ${d.gaya} (ATR: ${d.atr_pct}%)</div>
+        <div class="tp-grid">
+          <div class="tp-item tp-e"><div class="tp-l">💰 Harga Now</div><div class="tp-v">Rp${d.harga.toLocaleString('id-ID')}</div></div>
+          <div class="tp-item tp-re"><div class="tp-l">📥 Range Entry</div><div class="tp-v" style="font-size:13px">${rng}</div><div class="tp-s">S: Rp${d.support.toLocaleString('id-ID')} · R: Rp${d.resistance.toLocaleString('id-ID')}</div></div>
+          <div class="tp-item tp-sl"><div class="tp-l">🛑 SL</div><div class="tp-v">Rp${d.sl.toLocaleString('id-ID')} <span style="color:#dc2626;font-size:11px">${d.sl_pct}%</span></div></div>
+          <div class="tp-item tp-1"><div class="tp-l">✅ TP1 (+${d.tp1_pct}%)</div><div class="tp-v">Rp${d.tp1.toLocaleString('id-ID')}</div><div class="tp-s">~${d.est_tp1}h · 1x ATR</div></div>
+          <div class="tp-item tp-2"><div class="tp-l">✅ TP2 (+${d.tp2_pct}%)</div><div class="tp-v">Rp${d.tp2.toLocaleString('id-ID')}</div><div class="tp-s">~${d.est_tp2}h · 1.8x ATR</div></div>
+          <div class="tp-item tp-3"><div class="tp-l">🚀 TP3 (+${d.tp3_pct}%)</div><div class="tp-v">Rp${d.tp3.toLocaleString('id-ID')}</div><div class="tp-s">~${d.est_tp3}h · 2.5x ATR</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Candlestick Chart -->
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <span>Candlestick — ${d.kode}</span>
+        <div class="chart-tf">${['1mo','3mo','6mo','1y'].map(p => `<button class="${p==='6mo'?'active':''}" onclick="switchPeriod('${p}')">${p==='1mo'?'1B':p==='3mo'?'3B':p==='6mo'?'6B':'1T'}</button>`).join('')}</div>
+      </div>
+      <div id="chartContainer"></div>
+    </div>
+
+    <!-- Indicator Detail Cards -->
+    <div class="detail-grid">
+      <div class="detail-card">
+        <div class="detail-card-header dct"><span>🔵 Teknikal</span><span class="ds">${d.tek_score}</span></div>
+        <table class="detail-table"><tbody>${renderDetailRows(d.tek_details)}</tbody></table>
+      </div>
+      <div class="detail-card">
+        <div class="detail-card-header dcm"><span>🟠 Momentum</span><span class="ds">${d.mom_score}</span></div>
+        <table class="detail-table"><tbody>${renderDetailRows(d.mom_details)}</tbody></table>
+      </div>
+      <div class="detail-card">
+        <div class="detail-card-header dcf"><span>🟢 Fundamental</span><span class="ds">${d.fun_score}</span></div>
+        <table class="detail-table"><tbody>${renderDetailRows(d.fun_details)}</tbody></table>
+      </div>
+    </div>`;
+}
+
+// Render a single lane score bar
+function renderBar(label, score, color, bg) {
+  const pct = score > 0 ? score : 0;
+  return `<div class="bar-row">
+    <span class="bar-label">${label}</span>
+    <div class="bar-bg" style="background:${bg}">
+      <div class="bar-fill" style="width:${pct}%;background:${color}">
+        <span class="ft">${score}</span>
+      </div>
+    </div>
+    <span class="bar-num" style="color:${color}">${score}</span>
+    <span style="font-size:10px;color:#aaa;">/100</span>
+  </div>`;
+}
+
+// Render indicator detail rows with color-coded signals
+function renderDetailRows(details) {
+  return details.map(d => {
+    const c  = d.signal.startsWith('✅') ? 'sb' : d.signal.startsWith('⚠️') ? 'sw' : 'sx';
+    const sc = d.skor >= 10 ? '#059669' : d.skor >= 5 ? '#f59e0b' : '#dc2626';
+    return `<tr>
+      <td style="color:#555;">${d.indikator}</td>
+      <td class="${c}">${d.signal}</td>
+      <td style="font-weight:700;text-align:center;color:${sc}">${d.skor}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CANDLESTICK CHART
+// ══════════════════════════════════════════════════════════════════════════
+function renderChart(ohlcv) {
+  const c = document.getElementById('chartContainer');
+  if (!c) return;
+  if (currentChart) { currentChart.remove(); currentChart = null; }
+  currentChart = LightweightCharts.createChart(c, {
+    layout: { background: { color: '#ffffff' }, textColor: '#333' },
+    grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    rightPriceScale: { borderColor: '#e0e0e0', scaleMargins: { top: .15, bottom: .25 } },
+    timeScale: { borderColor: '#e0e0e0', timeVisible: true },
+  });
+  // Candlestick series
+  const cs = currentChart.addCandlestickSeries({
+    upColor: '#059669', downColor: '#dc2626',
+    borderUpColor: '#059669', borderDownColor: '#dc2626',
+    wickUpColor: '#059669', wickDownColor: '#dc2626',
+  });
+  cs.setData(ohlcv);
+  // Volume histogram
+  const vs = currentChart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: '' });
+  vs.setData(ohlcv.map(d => ({
+    time: d.time, value: d.volume || 0,
+    color: d.close >= d.open ? 'rgba(5,150,105,0.3)' : 'rgba(220,38,38,0.3)',
+  })));
+  currentChart.priceScale('').applyOptions({ scaleMargins: { top: .82, bottom: 0 } });
+  // Overlay MA lines
+  const m20 = MA(ohlcv, 20);
+  if (m20.length) currentChart.addLineSeries({ color: '#1d4ed8', lineWidth: 1.5, lastValueVisible: true }).setData(m20);
+  const m50 = MA(ohlcv, 50);
+  if (m50.length) currentChart.addLineSeries({ color: '#f59e0b', lineWidth: 1.5, lastValueVisible: true }).setData(m50);
+  currentChart.timeScale().fitContent();
+}
+
+// Switch chart timeframe — re-fetches data and updates active button
+async function switchPeriod(p) {
+  if (!currentKode) return;
+  try {
+    const r = await fetch(`${API}/api/chart/${currentKode}?period=${p}`);
+    const d = await r.json();
+    if (d.ok) {
+      renderChart(d.data);
+      // Update active button indicator
+      document.querySelectorAll('.chart-tf button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.chart-tf button').forEach(b => {
+        if (b.textContent === (p === '1mo' ? '1B' : p === '3mo' ? '3B' : p === '6mo' ? '6B' : '1T'))
+          b.classList.add('active');
+      });
+    }
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// 📊 REKOMENDASI (BATCH SCREENING)
+// ══════════════════════════════════════════════════════════════════════════
+async function loadRekomendasi() {
+  document.getElementById('main').innerHTML = '<div class="loading"><div class="spinner"></div><p>Menganalisis 12+ saham...</p></div>';
+  searchBatch();
+}
+
+async function searchBatch(q) {
+  if (!q) q = POPULAR.join(',');
+  try {
+    const r = await fetch(`${API}/api/screener?kodes=${encodeURIComponent(q)}`);
+    const d = await r.json();
+    if (!d.ok) { document.getElementById('main').innerHTML = `<div class="error">⚠️ ${d.error}</div>`; return; }
+    renderBatch(d.data);
+  } catch(e) { document.getElementById('main').innerHTML = '<div class="error">⚠️ Gagal terhubung</div>'; }
+}
+
+// Refresh current tab
+function reloadTab() { switchTab(currentTab); }
+
+function renderBatch(data) {
+  const valid  = data.filter(d => !d.error);
+  const errors = data.filter(d => d.error);
+
+  // Header + quick buttons — centered to match card width
+  let h = `<div style="max-width:980px;margin:0 auto;">
+    <h3 style="margin-bottom:10px;font-size:14px;">📊 Rekomendasi — 3 Jalur Analisis</h3>
+    <div class="quick-btns">
+      ${POPULAR.map(k => `<button onclick="searchSingle('${k}')">${k}</button>`).join('')}
+      <button style="border-color:#059669;color:#059669;font-weight:600" onclick="reloadTab()">🔄 Refresh</button>
+    </div>
+  </div>`;
+
+  if (errors.length) h += `<div class="error">${errors.length} saham gagal: ${errors.map(e => e.kode).join(', ')}</div>`;
+
+  h += '<div class="result-list">';
+  valid.forEach(d => {
+    const ch = d.change_1d >= 0 ? '+' : '';
+    // Proportion of each lane for the mini segmented bar
+    const tp = (d.tek_score / d.score * 100).toFixed(0) || 33;
+    const mp = (d.mom_score / d.score * 100).toFixed(0) || 33;
+    const fp = (d.fun_score / d.score * 100).toFixed(0) || 33;
+    const rcMap = {'STRONG BUY':'bs','BUY':'bb','HOLD':'bh','WATCH':'bw','AVOID':'ba'};
+    const gcMap = {'A':'ga','B':'gb','C':'gc','D':'gd'};
+
+    h += `<div class="rs-card" onclick="searchSingle('${d.kode}')">
+      <span class="rs-kode">${d.kode}</span>
+      <span class="rs-score" style="color:${d.score>=80?'#059669':d.score>=63?'#0ea5e9':'#f59e0b'}">${d.score}</span>
+      <span class="rs-rec"><span class="badge ${rcMap[d.rec]}" style="padding:3px 8px;font-size:10px">${d.rec}</span></span>
+      <span class="rs-price">Rp${d.harga.toLocaleString('id-ID')} ${ch}${d.change_1d.toFixed(2)}%</span>
+      <div class="mini-bars">
+        <div class="mini-bar-seg" style="width:${tp}%;background:#1d4ed8"></div>
+        <div class="mini-bar-seg" style="width:${mp}%;background:#d97706"></div>
+        <div class="mini-bar-seg" style="width:${fp}%;background:#059669"></div>
+      </div>
+      <span class="rs-g"><span class="rs-grade ${gcMap[d.grade]}"><span class="gr">grade</span> ${d.grade}</span></span>
+    </div>`;
+  });
+  h += '</div>';
+  document.getElementById('main').innerHTML = h;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// ⏰ BACKTEST TIME MACHINE
+// ══════════════════════════════════════════════════════════════════════════
+async function initBacktest() {
+  try {
+    const r = await fetch(`${API}/api/backtest/dates`);
+    const d = await r.json();
+    document.getElementById('main').innerHTML = `
+      <div class="bt-controls">
+        <label style="font-size:12px;font-weight:600;color:#555;">📅 Tanggal Mulai:</label>
+        <select id="btDate">${d.dates.map(dt => `<option value="${dt}">${dt}</option>`).join('')}</select>
+        <label style="font-size:12px;font-weight:600;color:#555;">⏱ Range:</label>
+        <select id="btHorizon">
+          <option value="5">5 Hari</option><option value="10">10 Hari</option>
+          <option value="15">15 Hari</option><option value="20" selected>20 Hari</option><option value="30">30 Hari</option>
+        </select>
+        <button class="btn-screen" onclick="btScreen()">🔍 Screen BUY</button>
+        <button class="btn-ff" id="btnFF" onclick="btFastForward()" disabled>⏩ Cek Hasil Aktual</button>
+      </div>
+      <div id="btResult">
+        <div style="text-align:center;padding:60px;color:#999;">
+          <p style="font-size:14px;">Pilih tanggal & range, klik <b>Screen BUY</b></p>
+          <p style="font-size:11px;color:#aaa;">Sistem akan menghitung scoring & proyeksi TP untuk 42 saham</p>
+        </div>
+      </div>`;
+  } catch(e) { document.getElementById('main').innerHTML = '<div class="error">⚠️ Gagal memuat data historis</div>'; }
+}
+
+async function btScreen() {
+  const dt = document.getElementById('btDate').value;
+  const hz = document.getElementById('btHorizon').value;
+  btShowing = false;
+  document.getElementById('btnFF').disabled = false;
+  document.getElementById('btResult').innerHTML = '<div class="loading"><div class="spinner"></div><p>Menghitung...</p></div>';
+  try {
+    const r = await fetch(`${API}/api/backtest/screen?date=${dt}&horizon=${hz}`);
+    const d = await r.json();
+    btData = d;
+    renderBacktest(d, false);
+  } catch(e) { document.getElementById('btResult').innerHTML = '<div class="error">⚠️ Gagal</div>'; }
+}
+
+function btFastForward() { btShowing = true; if (btData) renderBacktest(btData, true); }
+
+function renderBacktest(d, show) {
+  const data = d.data;
+  const hz   = d.horizon;
+
+  // --- Summary bar ---
+  let sumHtml = `<div class="bt-summary">
+    <div class="bt-stat"><div class="bts-l">📅 Tanggal</div><div class="bts-v" style="font-size:14px">${d.date}</div></div>
+    <div class="bt-stat"><div class="bts-l">⏱ Range</div><div class="bts-v" style="font-size:14px;color:#1d4ed8">${hz} Hari</div></div>
+    <div class="bt-stat"><div class="bts-l">🟢 Sinyal BUY</div><div class="bts-v" style="color:#059669">${data.length} saham</div></div>`;
+
+  if (show && data.length > 0) {
+    // fwd is stored directly on each stock object (not nested per horizon)
+    const withFwd = data.filter(x => x.fwd && Object.keys(x.fwd).length > 0);
+    const wins    = withFwd.filter(x => x.fwd.win).length;
+    const avgRet  = withFwd.length > 0
+      ? (withFwd.reduce((s, x) => s + x.fwd.ret_pct, 0) / withFwd.length).toFixed(1)
+      : 'N/A';
+    const tp1 = withFwd.filter(x => x.fwd.tp1_hit).length;
+    const tp2 = withFwd.filter(x => x.fwd.tp2_hit).length;
+    const tp3 = withFwd.filter(x => x.fwd.tp3_hit).length;
+
+    sumHtml += `
+      <div class="bt-stat" style="border-left:3px solid #059669">
+        <div class="bts-l">✅ Win (${hz}H)</div>
+        <div class="bts-v" style="color:#059669;font-size:16px">${wins}/${withFwd.length}</div>
+      </div>
+      <div class="bt-stat" style="border-left:3px solid #1d4ed8">
+        <div class="bts-l">📈 Avg Ret</div>
+        <div class="bts-v" style="color:${avgRet >= 0 ? '#059669' : '#dc2626'};font-size:16px">${avgRet >= 0 ? '+' : ''}${avgRet}%</div>
+      </div>
+      <div class="bt-stat" style="border-left:3px solid #8b5cf6">
+        <div class="bts-l">🎯 TP1/2/3</div>
+        <div class="bts-v" style="color:#8b5cf6;font-size:14px">${tp1}/${tp2}/${tp3}</div>
+      </div>`;
+  }
+  sumHtml += '</div>';
+
+  if (data.length === 0) {
+    document.getElementById('btResult').innerHTML = sumHtml + '<div style="text-align:center;padding:40px;color:#999;">😔 Tidak ada sinyal BUY di tanggal ini</div>';
+    return;
+  }
+
+  // --- Result table ---
+  let table = `<div class="bt-table-wrap"><table><thead><tr>
+    <th>#</th><th>Kode</th><th>Skor</th><th>Harga</th>
+    <th>Range Entry</th><th>Gaya</th><th>🛑 SL</th><th>TP1</th><th>TP2</th><th>TP3</th>`;
+  if (show) table += '<th>Harga Akhir</th><th>Return</th><th>TP Hit</th>';
+  table += '</tr></thead><tbody>';
+
+  data.forEach((s, i) => {
+    const rng = (s.entry_bawah && s.entry_atas)
+      ? `Rp${s.entry_bawah.toLocaleString('id-ID')} – Rp${s.entry_atas.toLocaleString('id-ID')}`
+      : '—';
+    let rc = '', oc = '';
+
+    if (show) {
+      const f = (s.fwd && Object.keys(s.fwd).length > 0) ? s.fwd : null;
+      if (f) {
+        rc = f.win ? 'bw' : 'bl';
+        const badges = [
+          f.tp1_hit ? '<span class="tp-hit">TP1 ✅</span>' : '<span class="tp-miss">TP1</span>',
+          f.tp2_hit ? '<span class="tp-hit">TP2 ✅</span>' : '<span class="tp-miss">TP2</span>',
+          f.tp3_hit ? '<span class="tp-hit">TP3 ✅</span>' : '<span class="tp-miss">TP3</span>',
+        ];
+        oc = `<td><b>Rp${f.price_fwd.toLocaleString('id-ID')}</b><br><span style="font-size:9px;color:#888;">📅 ${f.end_date}</span></td>
+              <td style="font-weight:700;color:${f.ret_pct >= 0 ? '#059669' : '#dc2626'}">${f.ret_pct >= 0 ? '+' : ''}${f.ret_pct}%</td>
+              <td>${badges.join(' ')}</td>`;
+      } else {
+        oc = '<td colspan="3" style="color:#999;font-size:10px;">Data tdk cukup</td>';
+      }
+    }
+
+    table += `<tr class="${rc}">
+      <td style="color:#999;">${i + 1}</td>
+      <td style="font-weight:700;color:#1d4ed8;">${s.kode}</td>
+      <td style="font-weight:700;">${s.score}</td>
+      <td>Rp${s.harga.toLocaleString('id-ID')}</td>
+      <td style="font-size:10px;">${rng}</td>
+      <td style="font-size:10px;color:#888;">${s.gaya}</td>
+      <td style="font-size:10px;"><span style="color:#dc2626;font-weight:600;">Rp${s.sl.toLocaleString('id-ID')}</span><br><span style="font-size:9px;color:#888;">${s.sl_pct}%</span></td>
+      <td style="font-size:10px;"><span style="color:#059669;font-weight:600;">Rp${s.tp1.toLocaleString('id-ID')}</span><br><span style="font-size:9px;color:#888;">+${s.tp1_pct}% ~${s.est_tp1}h</span></td>
+      <td style="font-size:10px;"><span style="color:#059669;font-weight:600;">Rp${s.tp2.toLocaleString('id-ID')}</span><br><span style="font-size:9px;color:#888;">+${s.tp2_pct}% ~${s.est_tp2}h</span></td>
+      <td style="font-size:10px;"><span style="color:#8b5cf6;font-weight:600;">Rp${s.tp3.toLocaleString('id-ID')}</span><br><span style="font-size:9px;color:#888;">+${s.tp3_pct}% ~${s.est_tp3}h</span></td>
+      ${oc}
+    </tr>`;
+  });
+
+  table += '</tbody></table></div>';
+  table += show
+    ? '<div class="tooltip">🟢=naik 🔴=turun · TP ✅=take profit tercapai</div>'
+    : '<div class="tooltip">💡 Klik <b>⏩ Cek Hasil Aktual</b> untuk melihat return riil</div>';
+
+  document.getElementById('btResult').innerHTML = sumHtml + table;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// INIT: Load dashboard on page open
+// ══════════════════════════════════════════════════════════════════════════
+loadDashboard();
+</script>
+</body>
+</html>
