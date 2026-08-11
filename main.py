@@ -160,95 +160,95 @@ def calc_scores(
     # Harga vs MA20
     if latest > ma20:
         tek += 13
-        t_details.append({"indikator": "Harga > MA20", "signal": "✅", "skor": 13})
+        t_details.append({"indikator": "Harga > MA20", "signal": "—", "skor": 13, "max": 13})
     else:
-        t_details.append({"indikator": "Harga > MA20", "signal": "❌", "skor": 0})
+        t_details.append({"indikator": "Harga > MA20", "signal": "—", "skor": 0, "max": 13})
 
     # Golden Cross / Death Cross (MA20 vs MA50)
     if ma20 > ma50:
         tek += 12
-        t_details.append({"indikator": "MA20 > MA50", "signal": "✅ Golden Cross", "skor": 12})
+        t_details.append({"indikator": "MA20 > MA50", "signal": "Golden Cross", "skor": 12, "max": 12})
     else:
-        t_details.append({"indikator": "MA20 > MA50", "signal": "❌ Death Cross", "skor": 0})
+        t_details.append({"indikator": "MA20 > MA50", "signal": "Death Cross", "skor": 0, "max": 12})
 
     # RSI (Relative Strength Index)
     if 40 <= rsi <= 70:
-        tek += 15; lbl = f"✅ Sehat ({rsi:.0f})"
+        tek += 15; lbl = f"Sehat ({rsi:.0f})"
     elif 30 <= rsi < 40:
-        tek += 8;  lbl = f"⚠️ Oversold ({rsi:.0f})"
+        tek += 8;  lbl = f"Oversold ({rsi:.0f})"
     elif rsi > 70:
-        tek += 5;  lbl = f"⚠️ Overbought ({rsi:.0f})"
+        tek += 5;  lbl = f"Overbought ({rsi:.0f})"
     else:
-        tek += 3;  lbl = f"❌ Jatuh ({rsi:.0f})"
+        tek += 3;  lbl = f"Jatuh ({rsi:.0f})"
     t_details.append({"indikator": f"RSI ({rsi:.0f})", "signal": lbl,
-                      "skor": 15 if 40<=rsi<=70 else (8 if 30<=rsi<40 else (5 if rsi>70 else 3))})
+                      "skor": 15 if 40<=rsi<=70 else (8 if 30<=rsi<40 else (5 if rsi>70 else 3)), "max": 15})
 
     # MACD
     if ml > ms and mh > 0:
-        tek += 15; lbl = "✅ Bullish kuat"
+        tek += 15; lbl = "Bullish kuat"
     elif ml > ms:
-        tek += 10; lbl = "⚠️ Bullish melemah"
+        tek += 10; lbl = "Bullish melemah"
     elif ml > 0:
-        tek += 5;  lbl = "⚠️ Bearish cross"
+        tek += 5;  lbl = "Bearish cross"
     else:
-        tek += 0;  lbl = "❌ Bearish"
+        tek += 0;  lbl = "Bearish"
     t_details.append({"indikator": "MACD", "signal": lbl,
-                      "skor": 15 if ml>ms and mh>0 else (10 if ml>ms else (5 if ml>0 else 0))})
+                      "skor": 15 if ml>ms and mh>0 else (10 if ml>ms else (5 if ml>0 else 0)), "max": 15})
 
     # Bollinger Band Position
     if 20 <= bb_pos <= 80:
-        tek += 10; lbl = f"✅ Normal ({bb_pos:.0f}%)"
+        tek += 10; lbl = f"Normal ({bb_pos:.0f}%)"
     else:
-        tek += 4;  lbl = f"⚠️ Ekstrem ({bb_pos:.0f}%)"
+        tek += 4;  lbl = f"Ekstrem ({bb_pos:.0f}%)"
     t_details.append({"indikator": "BB Position", "signal": lbl,
-                      "skor": 10 if 20<=bb_pos<=80 else 4})
+                      "skor": 10 if 20<=bb_pos<=80 else 4, "max": 10})
 
     # ATR (Average True Range) — measures volatility
     if 1 <= atr_pct <= 4:
-        tek += 10; lbl = f"✅ Wajar ({atr_pct:.1f}%)"
+        tek += 10; lbl = f"Wajar ({atr_pct:.1f}%)"
     elif atr_pct < 1:
-        tek += 5;  lbl = "⚠️ Tenang (<1%)"
+        tek += 5;  lbl = "Tenang (<1%)"
     else:
-        tek += 3;  lbl = "⚠️ Tinggi (>4%)"
+        tek += 3;  lbl = "Tinggi (>4%)"
     t_details.append({"indikator": "ATR", "signal": lbl,
-                      "skor": 10 if 1<=atr_pct<=4 else (5 if atr_pct<1 else 3)})
+                      "skor": 10 if 1<=atr_pct<=4 else (5 if atr_pct<1 else 3), "max": 10})
 
     # Stochastic
     if 20 <= st <= 80:
-        tek += 10; lbl = f"✅ Normal ({st:.0f})"
+        tek += 10; lbl = f"Normal ({st:.0f})"
     elif st < 20:
-        tek += 5;  lbl = f"⚠️ Oversold ({st:.0f})"
+        tek += 5;  lbl = f"Oversold ({st:.0f})"
     else:
-        tek += 4;  lbl = f"⚠️ Overbought ({st:.0f})"
+        tek += 4;  lbl = f"Overbought ({st:.0f})"
     t_details.append({"indikator": f"Stoch K", "signal": lbl,
-                      "skor": 10 if 20<=st<=80 else (5 if st<20 else 4)})
+                      "skor": 10 if 20<=st<=80 else (5 if st<20 else 4), "max": 10})
 
     # ADX (trend strength)
     if adx >= 25:
-        tek += 10; lbl = f"✅ Kuat ({adx:.0f})"
+        tek += 10; lbl = f"Kuat ({adx:.0f})"
     elif adx >= 20:
-        tek += 6;  lbl = f"⚠️ Moderat ({adx:.0f})"
+        tek += 6;  lbl = f"Moderat ({adx:.0f})"
     else:
-        tek += 2;  lbl = f"❌ Lemah ({adx:.0f})"
+        tek += 2;  lbl = f"Lemah ({adx:.0f})"
     t_details.append({"indikator": "ADX", "signal": lbl,
-                      "skor": 10 if adx>=25 else (6 if adx>=20 else 2)})
+                      "skor": 10 if adx>=25 else (6 if adx>=20 else 2), "max": 10})
 
     # EMA20
     if latest > ema20:
         tek += 5
-        t_details.append({"indikator": "Harga > EMA20", "signal": "✅", "skor": 5})
+        t_details.append({"indikator": "Harga > EMA20", "signal": "—", "skor": 5, "max": 5})
     else:
-        t_details.append({"indikator": "Harga > EMA20", "signal": "❌", "skor": 0})
+        t_details.append({"indikator": "Harga > EMA20", "signal": "—", "skor": 0, "max": 5})
 
     # Volume Ratio (latest vs average)
     if vr >= 1.3:
-        tek += 10; lbl = f"✅ Tinggi ({vr:.1f}x)"
+        tek += 10; lbl = f"Tinggi ({vr:.1f}x)"
     elif vr >= 0.7:
-        tek += 6;  lbl = f"⚠️ Normal ({vr:.1f}x)"
+        tek += 6;  lbl = f"Normal ({vr:.1f}x)"
     else:
-        tek += 2;  lbl = f"❌ Rendah ({vr:.1f}x)"
+        tek += 2;  lbl = f"Rendah ({vr:.1f}x)"
     t_details.append({"indikator": "Vol Ratio", "signal": lbl,
-                      "skor": 10 if vr>=1.3 else (6 if vr>=0.7 else 2)})
+                      "skor": 10 if vr>=1.3 else (6 if vr>=0.7 else 2), "max": 10})
 
     # --------------------------------------------------------------------------
     # 2) MOMENTUM SCORING (5 signals, max 100 points)
@@ -259,26 +259,26 @@ def calc_scores(
     ranges_hilo = np.array([high[i] - low[i] for i in range(n)])
     if n >= 7 and ranges_hilo[-1] <= np.min(ranges_hilo[-7:]):
         mom += 25
-        m_details.append({"indikator": "NR7", "signal": "✅ Potensi breakout", "skor": 25})
+        m_details.append({"indikator": "NR7", "signal": "Potensi breakout", "skor": 25, "max": 25})
     else:
-        m_details.append({"indikator": "NR7", "signal": "❌", "skor": 0})
+        m_details.append({"indikator": "NR7", "signal": "—", "skor": 0, "max": 25})
 
     # Bollinger Band Squeeze Breakout
     bbw = safe((bb_u - bb_l) / ((bb_u + bb_l) / 2) * 100 if (bb_u + bb_l) > 0 else 0)
     if bbw > 3 and latest > ma20:
         mom += 20
-        m_details.append({"indikator": "BB Squeeze Breakout", "signal": "✅", "skor": 20})
+        m_details.append({"indikator": "BB Squeeze Breakout", "signal": "—", "skor": 20, "max": 20})
     else:
-        m_details.append({"indikator": "BB Squeeze Breakout", "signal": "❌", "skor": 0})
+        m_details.append({"indikator": "BB Squeeze Breakout", "signal": "—", "skor": 0, "max": 20})
 
     # Volume Spike (5-day > 1.5× 5-day prior)
     v5 = safe(np.mean(volume[-5:]))
     v10 = safe(np.mean(volume[-10:-5]))
     if v10 > 0 and v5 / v10 > 1.5:
         mom += 20
-        m_details.append({"indikator": "Volume Spike", "signal": "✅ Lonjakan", "skor": 20})
+        m_details.append({"indikator": "Volume Spike", "signal": "Lonjakan", "skor": 20, "max": 20})
     else:
-        m_details.append({"indikator": "Volume Spike", "signal": "❌", "skor": 0})
+        m_details.append({"indikator": "Volume Spike", "signal": "—", "skor": 0, "max": 20})
 
     # Return 5-day / 20-day
     r5  = safe((close[-1] / close[-6]  - 1) * 100) if n >= 6  else 0
@@ -287,14 +287,14 @@ def calc_scores(
     ms20 = 10 if r20 > 5 else (5 if r20 > 0 else 0)
     mom += ms5 + ms20
     m_details.append({"indikator": "Return 5/20H", "signal": f"{r5:+.1f}% / {r20:+.1f}%",
-                      "skor": ms5 + ms20})
+                      "skor": ms5 + ms20, "max": 25})
 
     # Near 20-day High (price within 95% of recent high)
     if n >= 20 and close[-1] > np.max(close[-20:]) * .95:
         mom += 10
-        m_details.append({"indikator": "Near High", "signal": "✅", "skor": 10})
+        m_details.append({"indikator": "Near High", "signal": "—", "skor": 10, "max": 10})
     else:
-        m_details.append({"indikator": "Near High", "signal": "❌", "skor": 0})
+        m_details.append({"indikator": "Near High", "signal": "—", "skor": 0, "max": 10})
 
     # --------------------------------------------------------------------------
     # 3) FUNDAMENTAL SCORING (7 ratios, max 100 points)
@@ -313,65 +313,65 @@ def calc_scores(
 
         # PER (Price-to-Earnings Ratio)
         if pe <= 0:
-            f_details.append({"indikator": "PER", "signal": "❌ Negatif", "skor": 0})
+            f_details.append({"indikator": "PER", "signal": "Negatif", "skor": 0, "max": 20})
         elif pe <= 10:
-            f_score += 20; f_details.append({"indikator": f"PER ({pe:.1f})", "signal": "✅ Murah", "skor": 20})
+            f_score += 20; f_details.append({"indikator": f"PER ({pe:.1f})", "signal": "Murah", "skor": 20, "max": 20})
         elif pe <= 15:
-            f_score += 14; f_details.append({"indikator": f"PER ({pe:.1f})", "signal": "✅ Wajar", "skor": 14})
+            f_score += 14; f_details.append({"indikator": f"PER ({pe:.1f})", "signal": "Wajar", "skor": 14, "max": 20})
         elif pe <= 25:
-            f_score += 7;  f_details.append({"indikator": f"PER ({pe:.1f})", "signal": "⚠️ Mahal", "skor": 7})
+            f_score += 7;  f_details.append({"indikator": f"PER ({pe:.1f})", "signal": " Mahal", "skor": 7, "max": 20})
         else:
-            f_score += 2;  f_details.append({"indikator": f"PER ({pe:.1f})", "signal": "❌ Sangat mahal", "skor": 2})
+            f_score += 2;  f_details.append({"indikator": f"PER ({pe:.1f})", "signal": "Sangat mahal", "skor": 2, "max": 20})
 
         # PBV (Price-to-Book Value)
         if pb <= 1:
-            f_score += 15; f_details.append({"indikator": f"PBV ({pb:.2f})", "signal": "✅ Murah", "skor": 15})
+            f_score += 15; f_details.append({"indikator": f"PBV ({pb:.2f})", "signal": "Murah", "skor": 15, "max": 15})
         elif pb <= 3:
-            f_score += 9;  f_details.append({"indikator": f"PBV ({pb:.2f})", "signal": "✅ Wajar", "skor": 9})
+            f_score += 9;  f_details.append({"indikator": f"PBV ({pb:.2f})", "signal": "Wajar", "skor": 9, "max": 15})
         else:
-            f_score += 4;  f_details.append({"indikator": f"PBV ({pb:.2f})", "signal": "⚠️ Mahal", "skor": 4})
+            f_score += 4;  f_details.append({"indikator": f"PBV ({pb:.2f})", "signal": " Mahal", "skor": 4, "max": 15})
 
         # ROE (Return on Equity)
         if roe >= 0.20:
-            f_score += 20; f_details.append({"indikator": f"ROE ({roe*100:.0f}%)", "signal": "✅ Sangat baik", "skor": 20})
+            f_score += 20; f_details.append({"indikator": f"ROE ({roe*100:.0f}%)", "signal": "Sangat baik", "skor": 20, "max": 20})
         elif roe >= 0.10:
-            f_score += 14; f_details.append({"indikator": f"ROE ({roe*100:.0f}%)", "signal": "✅ Baik", "skor": 14})
+            f_score += 14; f_details.append({"indikator": f"ROE ({roe*100:.0f}%)", "signal": "Baik", "skor": 14, "max": 20})
         elif roe > 0:
-            f_score += 7;  f_details.append({"indikator": f"ROE ({roe*100:.0f}%)", "signal": "⚠️ Cukup", "skor": 7})
+            f_score += 7;  f_details.append({"indikator": f"ROE ({roe*100:.0f}%)", "signal": " Cukup", "skor": 7, "max": 20})
         else:
-            f_details.append({"indikator": "ROE", "signal": "❌ Negatif", "skor": 0})
+            f_details.append({"indikator": "ROE", "signal": "Negatif", "skor": 0, "max": 20})
 
         # Profit Margin
         if pm >= 0.20:
-            f_score += 15; f_details.append({"indikator": f"Profit Margin ({pm*100:.0f}%)", "signal": "✅ Sangat baik", "skor": 15})
+            f_score += 15; f_details.append({"indikator": f"Profit Margin ({pm*100:.0f}%)", "signal": "Sangat baik", "skor": 15, "max": 15})
         elif pm > 0:
-            f_score += 10; f_details.append({"indikator": f"Profit Margin ({pm*100:.0f}%)", "signal": "✅ Baik", "skor": 10})
+            f_score += 10; f_details.append({"indikator": f"Profit Margin ({pm*100:.0f}%)", "signal": "Baik", "skor": 10, "max": 15})
         else:
-            f_details.append({"indikator": "Profit Margin", "signal": "❌ Rugi", "skor": 0})
+            f_details.append({"indikator": "Profit Margin", "signal": "Rugi", "skor": 0, "max": 15})
 
         # Revenue Growth (YoY)
         if rg >= 0.15:
-            f_score += 15; f_details.append({"indikator": f"Rev Growth ({rg*100:.0f}%)", "signal": "✅ Tumbuh kuat", "skor": 15})
+            f_score += 15; f_details.append({"indikator": f"Rev Growth ({rg*100:.0f}%)", "signal": "Tumbuh kuat", "skor": 15, "max": 15})
         elif rg > 0:
-            f_score += 10; f_details.append({"indikator": f"Rev Growth ({rg*100:.0f}%)", "signal": "⚠️ Melambat", "skor": 10})
+            f_score += 10; f_details.append({"indikator": f"Rev Growth ({rg*100:.0f}%)", "signal": " Melambat", "skor": 10, "max": 15})
         else:
-            f_score += 2;  f_details.append({"indikator": "Rev Growth", "signal": "❌ Menurun", "skor": 2})
+            f_score += 2;  f_details.append({"indikator": "Rev Growth", "signal": "Menurun", "skor": 2, "max": 15})
 
         # Dividend Yield
         if dy >= 3:
-            f_score += 5; f_details.append({"indikator": f"Div Yield ({dy:.1f}%)", "signal": "✅ Tinggi", "skor": 5})
+            f_score += 5; f_details.append({"indikator": f"Div Yield ({dy:.1f}%)", "signal": "Tinggi", "skor": 5, "max": 5})
         elif dy > 0:
-            f_score += 2; f_details.append({"indikator": f"Div Yield ({dy:.1f}%)", "signal": "⚠️ Ada", "skor": 2})
+            f_score += 2; f_details.append({"indikator": f"Div Yield ({dy:.1f}%)", "signal": " Ada", "skor": 2, "max": 5})
         else:
-            f_details.append({"indikator": "Div Yield", "signal": "—", "skor": 0})
+            f_details.append({"indikator": "Div Yield", "signal": "—", "skor": 0, "max": 5})
 
         # DER (Debt-to-Equity Ratio)
         if der <= 0.5:
-            f_score += 10; f_details.append({"indikator": f"DER ({der:.2f})", "signal": "✅ Rendah", "skor": 10})
+            f_score += 10; f_details.append({"indikator": f"DER ({der:.2f})", "signal": "Rendah", "skor": 10, "max": 10})
         elif der <= 1.5:
-            f_score += 6;  f_details.append({"indikator": f"DER ({der:.2f})", "signal": "⚠️ Moderat", "skor": 6})
+            f_score += 6;  f_details.append({"indikator": f"DER ({der:.2f})", "signal": " Moderat", "skor": 6, "max": 10})
         else:
-            f_score += 2;  f_details.append({"indikator": f"DER ({der:.2f})", "signal": "❌ Tinggi", "skor": 2})
+            f_score += 2;  f_details.append({"indikator": f"DER ({der:.2f})", "signal": "Tinggi", "skor": 2, "max": 10})
 
     # --------------------------------------------------------------------------
     # COMPOSITE SCORE (0–100 scale)
@@ -744,7 +744,7 @@ def init_historical():
         df_i.columns = df_i.columns.get_level_values(0)
     df_i.index = df_i.index.tz_localize(None) if df_i.index.tz is not None else df_i.index
     IHsgHISTORICAL = df_i
-    print(f"✅ {len(HISTORICAL_CACHE)} stocks ready for backtesting")
+    print(f" {len(HISTORICAL_CACHE)} stocks ready for backtesting")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

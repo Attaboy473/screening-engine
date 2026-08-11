@@ -714,15 +714,15 @@ function renderBar(label, score, color, bg) {
   </div>`;
 }
 
-// Render indicator detail rows with color-coded signals
+// Render indicator detail rows — signal color from skor/max ratio, score as X/Y
 function renderDetailRows(details) {
   return details.map(d => {
-    const c  = d.signal.startsWith('✅') ? 'sb' : d.signal.startsWith('⚠️') ? 'sw' : 'sx';
-    const sc = d.skor >= 10 ? '#059669' : d.skor >= 5 ? '#f59e0b' : '#dc2626';
+    const ratio = (d.max && d.max > 0) ? d.skor / d.max : 0;
+    const sc = ratio >= 0.6 ? '#059669' : ratio >= 0.3 ? '#f59e0b' : '#dc2626';
     return `<tr>
       <td style="color:#555;">${d.indikator}</td>
-      <td class="${c}">${d.signal}</td>
-      <td style="font-weight:700;text-align:center;color:${sc}">${d.skor}</td>
+      <td style="color:${sc};font-weight:600;">${d.signal}</td>
+      <td style="font-weight:700;text-align:center;color:${sc}">${d.skor}/${d.max || '?'}</td>
     </tr>`;
   }).join('');
 }
