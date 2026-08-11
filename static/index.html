@@ -261,12 +261,16 @@ main { max-width: 1200px; margin: 0 auto; padding: 10px 16px; }
 .rs-card:hover { border-color: #059669; }
 
 /* Fixed-width columns for vertical alignment */
-.rs-kode { font-weight: 700; font-size: 13px; width: 68px; flex-shrink: 0; }
-.rs-score { font-size: 14px; font-weight: 800; width: 52px; flex-shrink: 0; text-align: center; }
-.rs-rec { width: 108px; flex-shrink: 0; text-align: center; }
-.rs-price { color: #666; font-size: 11px; width: 142px; flex-shrink: 0; text-align: right; padding-right: 18px; }
-.rs-bd { font-size: 10px; color: #888; flex: 1; }
-.rs-g { width: 78px; flex-shrink: 0; display: flex; justify-content: center; padding-left: 14px; }
+.rs-kode {
+  font-weight: 700; font-size: 13px; width: 56px; flex-shrink: 0;
+  cursor: pointer; color: #1d4ed8;
+}
+.rs-kode:hover { text-decoration: underline; color: #059669; }
+.rs-score { font-size: 14px; font-weight: 800; width: 42px; flex-shrink: 0; text-align: center; }
+.rs-rec { width: 95px; flex-shrink: 0; text-align: center; }
+.rs-price { color: #666; font-size: 11px; flex: 0.6; min-width: 110px; text-align: left; padding-left: 10px; }
+.rs-spacer { flex: 0.3; min-width: 20px; }
+.rs-g { width: 72px; flex-shrink: 0; display: flex; justify-content: center; }
 .rs-grade { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; border: 1.5px solid; white-space: nowrap; }
 .rs-grade .gr { font-size: 7px; font-weight: 500; text-transform: uppercase; letter-spacing: .03em; opacity: .7; }
 
@@ -868,18 +872,15 @@ function renderBatch(data) {
   h += '<div class="result-list">';
   valid.forEach(d => {
     const ch = d.change_1d >= 0 ? '+' : '';
-    // Proportion of each lane for the mini segmented bar
-    const tp = (d.tek_score / d.score * 100).toFixed(0) || 33;
-    const mp = (d.mom_score / d.score * 100).toFixed(0) || 33;
-    const fp = (d.fun_score / d.score * 100).toFixed(0) || 33;
     const rcMap = {'STRONG BUY':'bs','BUY':'bb','HOLD':'bh','WATCH':'bw','AVOID':'ba'};
     const gcMap = {'A':'ga','B':'gb','C':'gc','D':'gd'};
 
     h += `<div class="rs-card">
-      <span class="rs-kode">${d.kode}</span>
+      <span class="rs-kode" onclick="event.stopPropagation();searchSingle('${d.kode}')">${d.kode}</span>
       <span class="rs-score" style="color:${d.score>=80?'#059669':d.score>=63?'#0ea5e9':'#f59e0b'}">${d.score}</span>
       <span class="rs-rec"><span class="badge ${rcMap[d.rec]}" style="padding:3px 8px;font-size:10px">${d.rec}</span></span>
       <span class="rs-price">Rp${d.harga.toLocaleString('id-ID')} ${ch}${d.change_1d.toFixed(2)}%</span>
+      <span class="rs-spacer"></span>
       <span class="rs-g"><span class="rs-grade ${gcMap[d.grade]}"><span class="gr">grade</span> ${d.grade}</span></span>
       <button class="rs-analisis-btn" onclick="event.stopPropagation();showAnalisisPopup('${d.kode}')">🔍 Analisis</button>
     </div>`;
