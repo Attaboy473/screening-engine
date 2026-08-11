@@ -723,7 +723,7 @@ def init_historical():
         for k in TICKERS_42:
             futures[pool.submit(
                 lambda c=k: yf.Ticker(f"{c}.JK").history(
-                    start="2024-01-01", end="2026-02-01", auto_adjust=True
+                    start="2024-01-01", end="2026-02-01", auto_adjust=False
                 )
             )] = k
         for f in as_completed(futures):
