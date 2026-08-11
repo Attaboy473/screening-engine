@@ -273,6 +273,56 @@ main { max-width: 1200px; margin: 0 auto; padding: 10px 16px; }
 /* Mini segmented bar showing Teknikal/Momentum/Fundamental proportion */
 .mini-bars { display: flex; gap: 3px; flex: 1; max-width: 210px; height: 10px; margin: 0 18px; }
 .mini-bar-seg { height: 100%; border-radius: 2px; }
+.rs-analisis-btn {
+  padding: 4px 10px; background: #eff6ff; border: 1px solid #bfdbfe;
+  border-radius: 5px; cursor: pointer; font-size: 10px; font-weight: 600;
+  color: #1d4ed8; font-family: inherit; transition: all .12s;
+  white-space: nowrap; flex-shrink: 0;
+}
+.rs-analisis-btn:hover { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MODAL POPUP — Brief Analysis
+   ══════════════════════════════════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.4);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; animation: fadeIn .15s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal-box {
+  background: #fff; border-radius: 12px; padding: 24px 28px;
+  max-width: 520px; width: 90%; max-height: 85vh; overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,.15); animation: slideUp .2s ease;
+  position: relative;
+}
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.modal-close {
+  position: absolute; top: 10px; right: 14px;
+  background: none; border: none; font-size: 18px; cursor: pointer;
+  color: #999; padding: 4px; line-height: 1;
+}
+.modal-close:hover { color: #333; }
+.modal-kode { font-size: 18px; font-weight: 700; color: #111; }
+.modal-sector { font-size: 11px; color: #888; margin-left: 6px; }
+.modal-price { font-size: 22px; font-weight: 800; margin-top: 4px; }
+.modal-change { font-size: 11px; font-weight: 600; }
+.modal-meta { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.modal-tag { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+.mt-green { background: #f0fdf4; color: #059669; }
+.mt-blue { background: #eff6ff; color: #1d4ed8; }
+.mt-amber { background: #fffbeb; color: #d97706; }
+.modal-lanes { display: flex; gap: 8px; margin-top: 12px; }
+.modal-lane { flex: 1; background: #f9fafb; border-radius: 6px; padding: 8px 10px; text-align: center; }
+.modal-lane .mln { font-size: 9px; font-weight: 600; color: #888; text-transform: uppercase; margin-bottom: 2px; }
+.modal-lane .mls { font-size: 18px; font-weight: 800; }
+.modal-lane .mlx { font-size: 9px; color: #aaa; }
+.modal-tp { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.modal-tpi { background: #f9fafb; border-left: 3px solid #059669; border-radius: 4px; padding: 6px 10px; flex: 1; min-width: 100px; }
+.modal-tpi .mtn { font-size: 9px; font-weight: 600; color: #888; }
+.modal-tpi .mtv { font-size: 12px; font-weight: 700; color: #111; }
+.modal-tpi .mtx { font-size: 9px; color: #aaa; margin-top: 1px; }
+.modal-loader { text-align: center; padding: 30px; color: #999; }
 
 /* Quick stock tag buttons */
 .quick-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -738,6 +788,68 @@ async function searchBatch(q) {
 // Refresh current tab
 function reloadTab() { switchTab(currentTab); }
 
+// ── Modal Popup: Brief Analysis ──
+async function showAnalisisPopup(kode) {
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = '<div class="modal-box"><div class="modal-loader"><div class="spinner"></div><p>Memuat analisis ' + kode + '...</p></div></div>';
+  document.body.appendChild(overlay);
+
+  // Close on overlay click
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+
+  try {
+    const r = await fetch(`${API}/api/score/${kode}`);
+    const d = await r.json();
+    if (!d.ok) { overlay.querySelector('.modal-box').innerHTML = '<p style="color:#dc2626;text-align:center;padding:20px;">⚠️ ' + d.error + '</p>'; return; }
+    const s = d.data;
+    const cc = s.change_1d >= 0 ? 'up' : 'down';
+    const cs = s.change_1d >= 0 ? '+' : '';
+    const rcMap = {'STRONG BUY':'bs','BUY':'bb','HOLD':'bh','WATCH':'bw','AVOID':'ba'};
+    const gcMap = {'A':'ga','B':'gb','C':'gc','D':'gd'};
+    const total = s.score;
+    const tc = total >= 80 ? '#059669' : total >= 63 ? '#0ea5e9' : total >= 47 ? '#f59e0b' : '#dc2626';
+    const laneColors = {tek:'#1d4ed8',mom:'#d97706',fun:'#059669'};
+    const labels = ['Sangat Baik','Baik','Netral','Buruk','Jelek'];
+    const labelIdx = total >= 80 ? 0 : total >= 63 ? 1 : total >= 47 ? 2 : total >= 30 ? 3 : 4;
+    const labelCols = ['#059669','#0ea5e9','#f59e0b','#f97316','#dc2626'];
+
+    overlay.querySelector('.modal-box').innerHTML = `
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div class="modal-kode">${s.kode}<span class="modal-sector">· ${s.sector}</span></div>
+      <div class="modal-price">Rp${s.harga.toLocaleString('id-ID')}</div>
+      <div class="modal-change ${cc}">${cs}${s.change_1d.toFixed(2)}% hari ini</div>
+      <div class="modal-meta">
+        <span class="badge ${rcMap[s.rec]}" style="font-size:10px;padding:3px 8px;">${s.rec}</span>
+        <span class="grade-badge ${gcMap[s.grade]}" style="font-size:10px;padding:3px 8px;">Grade ${s.grade}</span>
+        <span class="modal-tag mt-blue">Skor <b>${s.score}/100</b></span>
+        <span class="modal-tag ${total>=63?'mt-green':'mt-amber'}" style="font-size:10px;">${labels[labelIdx]}</span>
+      </div>
+      <div class="modal-lanes">
+        <div class="modal-lane"><div class="mln">🔵 Teknikal</div><div class="mls" style="color:${laneColors.tek}">${s.tek_score}</div><div class="mlx">/100</div></div>
+        <div class="modal-lane"><div class="mln">🟠 Momentum</div><div class="mls" style="color:${laneColors.mom}">${s.mom_score}</div><div class="mlx">/100</div></div>
+        <div class="modal-lane"><div class="mln">🟢 Fundamental</div><div class="mls" style="color:${laneColors.fun}">${s.fun_score}</div><div class="mlx">/100</div></div>
+      </div>
+      <div class="modal-tp">
+        <div class="modal-tpi"><div class="mtn">🛑 SL (${s.sl_pct}%)</div><div class="mtv">Rp${s.sl.toLocaleString('id-ID')}</div></div>
+        <div class="modal-tpi"><div class="mtn">✅ TP1 (+${s.tp1_pct}%)</div><div class="mtv">Rp${s.tp1.toLocaleString('id-ID')}</div><div class="mtx">~${s.est_tp1} hari</div></div>
+        <div class="modal-tpi"><div class="mtn">✅ TP2 (+${s.tp2_pct}%)</div><div class="mtv">Rp${s.tp2.toLocaleString('id-ID')}</div><div class="mtx">~${s.est_tp2} hari</div></div>
+        <div class="modal-tpi"><div class="mtn">🚀 TP3 (+${s.tp3_pct}%)</div><div class="mtv">Rp${s.tp3.toLocaleString('id-ID')}</div><div class="mtx">~${s.est_tp3} hari</div></div>
+      </div>
+      <div style="margin-top:10px;font-size:10px;color:#888;">📌 ${s.gaya} · MA20: Rp${s.ma20.toLocaleString('id-ID')} · RSI: ${s.rsi} · ADX: ${s.adx}</div>
+    `;
+  } catch(e) {
+    overlay.querySelector('.modal-box').innerHTML = '<p style="color:#dc2626;text-align:center;padding:20px;">⚠️ Gagal memuat data</p>';
+  }
+}
+
+// Close modal helper (attached to window for button onclick)
+window.closeModal = function() {
+  const overlay = document.querySelector('.modal-overlay');
+  if (overlay) overlay.remove();
+};
+
 function renderBatch(data) {
   const valid  = data.filter(d => !d.error);
   const errors = data.filter(d => d.error);
@@ -763,17 +875,13 @@ function renderBatch(data) {
     const rcMap = {'STRONG BUY':'bs','BUY':'bb','HOLD':'bh','WATCH':'bw','AVOID':'ba'};
     const gcMap = {'A':'ga','B':'gb','C':'gc','D':'gd'};
 
-    h += `<div class="rs-card" onclick="searchSingle('${d.kode}')">
+    h += `<div class="rs-card">
       <span class="rs-kode">${d.kode}</span>
       <span class="rs-score" style="color:${d.score>=80?'#059669':d.score>=63?'#0ea5e9':'#f59e0b'}">${d.score}</span>
       <span class="rs-rec"><span class="badge ${rcMap[d.rec]}" style="padding:3px 8px;font-size:10px">${d.rec}</span></span>
       <span class="rs-price">Rp${d.harga.toLocaleString('id-ID')} ${ch}${d.change_1d.toFixed(2)}%</span>
-      <div class="mini-bars">
-        <div class="mini-bar-seg" style="width:${tp}%;background:#1d4ed8"></div>
-        <div class="mini-bar-seg" style="width:${mp}%;background:#d97706"></div>
-        <div class="mini-bar-seg" style="width:${fp}%;background:#059669"></div>
-      </div>
       <span class="rs-g"><span class="rs-grade ${gcMap[d.grade]}"><span class="gr">grade</span> ${d.grade}</span></span>
+      <button class="rs-analisis-btn" onclick="event.stopPropagation();showAnalisisPopup('${d.kode}')">🔍 Analisis</button>
     </div>`;
   });
   h += '</div>';
