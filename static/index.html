@@ -869,8 +869,9 @@ let recData = [];
 let recFilter = 'Semua';
 
 function renderBatch(data) {
-  const valid  = data.filter(d => !d.error);
-  const errors = data.filter(d => d.error);
+  const raw = Array.isArray(data) ? data : (data && data.data ? data.data : data);
+  const valid  = Array.isArray(raw) ? raw.filter(d => !d.error) : [];
+  const errors = Array.isArray(raw) ? raw.filter(d => d.error) : [];
   recData = valid; // simpan data mentah buat filter
 
   // Header + quick buttons — centered to match card width
@@ -917,7 +918,7 @@ function renderBatch(data) {
 function setRecFilter(gaya) {
   recFilter = gaya;
   // Re-render tanpa fetch ulang — pake data yang udah tersimpan
-  renderBatch({ data: recData, ok: true });
+  renderBatch(recData);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
