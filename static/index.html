@@ -3,9 +3,9 @@
 ║                    SCREENING ENGINE — FRONTEND UI                          ║
 ║                                                                            ║
 ║  Single-page application with 3-tab navigation:                            ║
-║    🏠 Dashboard    — IHSG live data + top gainers/losers + market overview ║
-║    📊 Rekomendasi  — Batch screening of 12+ stocks ranked by score         ║
-║    ⏰ Backtest     — Historical time-machine validation                    ║
+║    Dashboard    — IHSG live data + top gainers/losers + market overview ║
+║    Rekomendasi  — Batch screening of 12+ stocks ranked by score         ║
+║    Backtest     — Historical time-machine validation                    ║
 ║                                                                            ║
 ║  Plus inline search: type a stock code → full analysis + candlestick chart ║
 ║                                                                            ║
@@ -413,9 +413,9 @@ main { max-width: 1200px; margin: 0 auto; padding: 10px 16px; }
 <div class="topbar">
   <span class="logo">Screening Engine</span>
   <div class="nav-tabs">
-    <button class="tab-btn active" onclick="switchTab('dashboard')">🏠 Dashboard</button>
-    <button class="tab-btn" onclick="switchTab('rekomendasi')">📊 Rekomendasi</button>
-    <button class="tab-btn" onclick="switchTab('backtest')">⏰ Backtest</button>
+    <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
+    <button class="tab-btn" onclick="switchTab('rekomendasi')">Rekomendasi</button>
+    <button class="tab-btn" onclick="switchTab('backtest')">Backtest</button>
   </div>
   <div class="search-wrap">
     <input type="text" id="searchInput" placeholder="Analisis Per Emiten... BBCA" onkeydown="if(event.key==='Enter')searchGo()">
@@ -464,16 +464,16 @@ function searchGo() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// 🏠 DASHBOARD
+// DASHBOARD
 // ══════════════════════════════════════════════════════════════════════════
 async function loadDashboard() {
   document.getElementById('main').innerHTML = '<div class="loading"><div class="spinner"></div><p>Memuat data pasar...</p></div>';
   try {
     const r = await fetch(`${API}/api/ihsg`);
     const d = await r.json();
-    if (!d.ok) { document.getElementById('main').innerHTML = `<div class="error">⚠️ ${d.error}</div>`; return; }
+    if (!d.ok) { document.getElementById('main').innerHTML = `<div class="error">${d.error}</div>`; return; }
     renderDashboard(d);
-  } catch(e) { document.getElementById('main').innerHTML = '<div class="error">⚠️ Gagal terhubung</div>'; }
+  } catch(e) { document.getElementById('main').innerHTML = '<div class="error">Gagal terhubung</div>'; }
 }
 
 function renderDashboard(d) {
@@ -525,11 +525,11 @@ function renderDashboard(d) {
       </div>
       <div>
         <div class="m-card" style="margin-bottom:10px;">
-          <div class="m-header gh">🟢 Top Gainers</div>
+          <div class="m-header gh">Top Gainers</div>
           <div style="overflow-y:auto">${gh}</div>
         </div>
         <div class="m-card">
-          <div class="m-header lh">🔴 Top Losers</div>
+          <div class="m-header lh">Top Losers</div>
           <div style="overflow-y:auto">${lh}</div>
         </div>
       </div>
@@ -542,12 +542,12 @@ function renderOverview(ih) {
   const ov = ih.overview;
   if (!ov) return '';
   return `<div class="overview-card">
-    <div class="ov-header">📊 Market Overview</div>
+    <div class="ov-header">Market Overview</div>
     <div class="ov-grid">
-      <div class="ov-item"><div class="ovl">📈 Market Breadth</div><div class="ovv">${ov.breadth||'—'}</div></div>
-      <div class="ov-item"><div class="ovl">💱 Foreign Flow</div><div class="ovv">${ov.foreign||'—'}</div></div>
-      <div class="ov-item"><div class="ovl">🧭 Market Sentiment</div><div class="ovv">${ov.sentiment||'—'}</div></div>
-      <div class="ov-item"><div class="ovl">📐 Technical Outlook</div><div class="ovv">${ov.technical||'—'}</div></div>
+      <div class="ov-item"><div class="ovl">Market Breadth</div><div class="ovv">${ov.breadth||'—'}</div></div>
+      <div class="ov-item"><div class="ovl">Foreign Flow</div><div class="ovv">${ov.foreign||'—'}</div></div>
+      <div class="ov-item"><div class="ovl">Market Sentiment</div><div class="ovv">${ov.sentiment||'—'}</div></div>
+      <div class="ov-item"><div class="ovl">Technical Outlook</div><div class="ovv">${ov.technical||'—'}</div></div>
     </div></div>`;
 }
 
@@ -589,7 +589,7 @@ function MA(data, period) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// 🔍 STOCK ANALYSIS (Analisis Per Emiten)
+// STOCK ANALYSIS (Analisis Per Emiten)
 // ══════════════════════════════════════════════════════════════════════════
 async function searchSingle(kode) {
   currentKode = kode.toUpperCase().trim();
@@ -602,11 +602,11 @@ async function searchSingle(kode) {
       fetch(`${API}/api/chart/${currentKode}?period=6mo`),
     ]);
     const sd = await sr.json();
-    if (!sd.ok) { document.getElementById('main').innerHTML = `<div class="error">⚠️ ${sd.error}</div>`; return; }
+    if (!sd.ok) { document.getElementById('main').innerHTML = `<div class="error"> ${sd.error}</div>`; return; }
     const cd = await cr.json();
     renderAnalisis(sd.data);
     if (cd.ok) renderChart(cd.data);
-  } catch(e) { document.getElementById('main').innerHTML = '<div class="error">⚠️ Gagal terhubung</div>'; }
+  } catch(e) { document.getElementById('main').innerHTML = '<div class="error">Gagal terhubung</div>'; }
 }
 
 function renderAnalisis(d) {
@@ -654,21 +654,21 @@ function renderAnalisis(d) {
           <span style="font-size:11px;font-weight:600;color:${labelCols[labelIdx]}">${labels[labelIdx]}</span>
         </div>
         <div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:8px;">${threshold}</div>
-        ${renderBar('🔵 Teknikal', d.tek_score, '#1d4ed8', '#dbeafe')}
-        ${renderBar('🟠 Momentum', d.mom_score, '#d97706', '#fef3c7')}
-        ${renderBar('🟢 Fundamental', d.fun_score, '#059669', '#dcfce7')}
+        ${renderBar('Teknikal', d.tek_score, '#1d4ed8', '#dbeafe')}
+        ${renderBar('Momentum', d.mom_score, '#d97706', '#fef3c7')}
+        ${renderBar('Fundamental', d.fun_score, '#059669', '#dcfce7')}
       </div>
 
       <!-- Trading Plan — ATR-based Conservative -->
       <div class="tp-section">
-        <div class="tp-header">🎯 Trading Plan — ${d.gaya} (ATR: ${d.atr_pct}%)</div>
+        <div class="tp-header">Trading Plan — ${d.gaya} (ATR: ${d.atr_pct}%)</div>
         <div class="tp-grid">
-          <div class="tp-item tp-e"><div class="tp-l">💰 Harga Now</div><div class="tp-v">Rp${d.harga.toLocaleString('id-ID')}</div></div>
-          <div class="tp-item tp-re"><div class="tp-l">📥 Range Entry</div><div class="tp-v" style="font-size:13px">${rng}</div><div class="tp-s">S: Rp${d.support.toLocaleString('id-ID')} · R: Rp${d.resistance.toLocaleString('id-ID')}</div></div>
-          <div class="tp-item tp-sl"><div class="tp-l">🛑 SL</div><div class="tp-v">Rp${d.sl.toLocaleString('id-ID')} <span style="color:#dc2626;font-size:11px">${d.sl_pct}%</span></div></div>
-          <div class="tp-item tp-1"><div class="tp-l">✅ TP1 (+${d.tp1_pct}%)</div><div class="tp-v">Rp${d.tp1.toLocaleString('id-ID')}</div><div class="tp-s">~${d.est_tp1}h · 1x ATR</div></div>
-          <div class="tp-item tp-2"><div class="tp-l">✅ TP2 (+${d.tp2_pct}%)</div><div class="tp-v">Rp${d.tp2.toLocaleString('id-ID')}</div><div class="tp-s">~${d.est_tp2}h · 1.8x ATR</div></div>
-          <div class="tp-item tp-3"><div class="tp-l">🚀 TP3 (+${d.tp3_pct}%)</div><div class="tp-v">Rp${d.tp3.toLocaleString('id-ID')}</div><div class="tp-s">~${d.est_tp3}h · 2.5x ATR</div></div>
+          <div class="tp-item tp-e"><div class="tp-l">Harga Now</div><div class="tp-v">Rp${d.harga.toLocaleString('id-ID')}</div></div>
+          <div class="tp-item tp-re"><div class="tp-l">Range Entry</div><div class="tp-v" style="font-size:13px">${rng}</div><div class="tp-s">S: Rp${d.support.toLocaleString('id-ID')} · R: Rp${d.resistance.toLocaleString('id-ID')}</div></div>
+          <div class="tp-item tp-sl"><div class="tp-l">SL</div><div class="tp-v">Rp${d.sl.toLocaleString('id-ID')} <span style="color:#dc2626;font-size:11px">${d.sl_pct}%</span></div></div>
+          <div class="tp-item tp-1"><div class="tp-l">TP1 (+${d.tp1_pct}%)</div><div class="tp-v">Rp${d.tp1.toLocaleString('id-ID')}</div><div class="tp-s">~${d.est_tp1}h · 1x ATR</div></div>
+          <div class="tp-item tp-2"><div class="tp-l">TP2 (+${d.tp2_pct}%)</div><div class="tp-v">Rp${d.tp2.toLocaleString('id-ID')}</div><div class="tp-s">~${d.est_tp2}h · 1.8x ATR</div></div>
+          <div class="tp-item tp-3"><div class="tp-l">TP3 (+${d.tp3_pct}%)</div><div class="tp-v">Rp${d.tp3.toLocaleString('id-ID')}</div><div class="tp-s">~${d.est_tp3}h · 2.5x ATR</div></div>
         </div>
       </div>
     </div>
@@ -685,15 +685,15 @@ function renderAnalisis(d) {
     <!-- Indicator Detail Cards -->
     <div class="detail-grid">
       <div class="detail-card">
-        <div class="detail-card-header dct"><span>🔵 Teknikal</span><span class="ds">${d.tek_score}</span></div>
+        <div class="detail-card-header dct"><span>Teknikal</span><span class="ds">${d.tek_score}</span></div>
         <table class="detail-table"><tbody>${renderDetailRows(d.tek_details)}</tbody></table>
       </div>
       <div class="detail-card">
-        <div class="detail-card-header dcm"><span>🟠 Momentum</span><span class="ds">${d.mom_score}</span></div>
+        <div class="detail-card-header dcm"><span>Momentum</span><span class="ds">${d.mom_score}</span></div>
         <table class="detail-table"><tbody>${renderDetailRows(d.mom_details)}</tbody></table>
       </div>
       <div class="detail-card">
-        <div class="detail-card-header dcf"><span>🟢 Fundamental</span><span class="ds">${d.fun_score}</span></div>
+        <div class="detail-card-header dcf"><span>Fundamental</span><span class="ds">${d.fun_score}</span></div>
         <table class="detail-table"><tbody>${renderDetailRows(d.fun_details)}</tbody></table>
       </div>
     </div>`;
@@ -782,7 +782,7 @@ async function switchPeriod(p) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// 📊 REKOMENDASI (BATCH SCREENING)
+// REKOMENDASI (BATCH SCREENING)
 // ══════════════════════════════════════════════════════════════════════════
 async function loadRekomendasi() {
   document.getElementById('main').innerHTML = '<div class="loading"><div class="spinner"></div><p>Menganalisis 12+ saham...</p></div>';
@@ -794,9 +794,9 @@ async function searchBatch(q) {
   try {
     const r = await fetch(`${API}/api/screener?kodes=${encodeURIComponent(q)}`);
     const d = await r.json();
-    if (!d.ok) { document.getElementById('main').innerHTML = `<div class="error">⚠️ ${d.error}</div>`; return; }
+    if (!d.ok) { document.getElementById('main').innerHTML = `<div class="error">${d.error}</div>`; return; }
     renderBatch(d.data);
-  } catch(e) { document.getElementById('main').innerHTML = '<div class="error">⚠️ Gagal terhubung</div>'; }
+  } catch(e) { document.getElementById('main').innerHTML = '<div class="error">Gagal terhubung</div>'; }
 }
 
 // Refresh current tab
@@ -816,7 +816,7 @@ async function showAnalisisPopup(kode) {
   try {
     const r = await fetch(`${API}/api/score/${kode}`);
     const d = await r.json();
-    if (!d.ok) { overlay.querySelector('.modal-box').innerHTML = '<p style="color:#dc2626;text-align:center;padding:20px;">⚠️ ' + d.error + '</p>'; return; }
+    if (!d.ok) { overlay.querySelector('.modal-box').innerHTML = '<p style="color:#dc2626;text-align:center;padding:20px;"> ' + d.error + '</p>'; return; }
     const s = d.data;
     const cc = s.change_1d >= 0 ? 'up' : 'down';
     const cs = s.change_1d >= 0 ? '+' : '';
@@ -830,7 +830,7 @@ async function showAnalisisPopup(kode) {
     const labelCols = ['#059669','#0ea5e9','#f59e0b','#f97316','#dc2626'];
 
     overlay.querySelector('.modal-box').innerHTML = `
-      <button class="modal-close" onclick="closeModal()">✕</button>
+      <button class="modal-close" onclick="closeModal()">×</button>
       <div class="modal-kode">${s.kode}<span class="modal-sector">· ${s.sector}</span></div>
       <div class="modal-price">Rp${s.harga.toLocaleString('id-ID')}</div>
       <div class="modal-change ${cc}">${cs}${s.change_1d.toFixed(2)}% hari ini</div>
@@ -841,20 +841,20 @@ async function showAnalisisPopup(kode) {
         <span class="modal-tag ${total>=63?'mt-green':'mt-amber'}" style="font-size:10px;">${labels[labelIdx]}</span>
       </div>
       <div class="modal-lanes">
-        <div class="modal-lane"><div class="mln">🔵 Teknikal</div><div class="mls" style="color:${laneColors.tek}">${s.tek_score}</div><div class="mlx">/100</div></div>
-        <div class="modal-lane"><div class="mln">🟠 Momentum</div><div class="mls" style="color:${laneColors.mom}">${s.mom_score}</div><div class="mlx">/100</div></div>
-        <div class="modal-lane"><div class="mln">🟢 Fundamental</div><div class="mls" style="color:${laneColors.fun}">${s.fun_score}</div><div class="mlx">/100</div></div>
+        <div class="modal-lane"><div class="mln">Teknikal</div><div class="mls" style="color:${laneColors.tek}">${s.tek_score}</div><div class="mlx">/100</div></div>
+        <div class="modal-lane"><div class="mln">Momentum</div><div class="mls" style="color:${laneColors.mom}">${s.mom_score}</div><div class="mlx">/100</div></div>
+        <div class="modal-lane"><div class="mln">Fundamental</div><div class="mls" style="color:${laneColors.fun}">${s.fun_score}</div><div class="mlx">/100</div></div>
       </div>
       <div class="modal-tp">
-        <div class="modal-tpi"><div class="mtn">🛑 SL (${s.sl_pct}%)</div><div class="mtv">Rp${s.sl.toLocaleString('id-ID')}</div></div>
-        <div class="modal-tpi"><div class="mtn">✅ TP1 (+${s.tp1_pct}%)</div><div class="mtv">Rp${s.tp1.toLocaleString('id-ID')}</div><div class="mtx">~${s.est_tp1} hari</div></div>
-        <div class="modal-tpi"><div class="mtn">✅ TP2 (+${s.tp2_pct}%)</div><div class="mtv">Rp${s.tp2.toLocaleString('id-ID')}</div><div class="mtx">~${s.est_tp2} hari</div></div>
-        <div class="modal-tpi"><div class="mtn">🚀 TP3 (+${s.tp3_pct}%)</div><div class="mtv">Rp${s.tp3.toLocaleString('id-ID')}</div><div class="mtx">~${s.est_tp3} hari</div></div>
+        <div class="modal-tpi"><div class="mtn">SL (${s.sl_pct}%)</div><div class="mtv">Rp${s.sl.toLocaleString('id-ID')}</div></div>
+        <div class="modal-tpi"><div class="mtn">TP1 (+${s.tp1_pct}%)</div><div class="mtv">Rp${s.tp1.toLocaleString('id-ID')}</div><div class="mtx">~${s.est_tp1} hari</div></div>
+        <div class="modal-tpi"><div class="mtn">TP2 (+${s.tp2_pct}%)</div><div class="mtv">Rp${s.tp2.toLocaleString('id-ID')}</div><div class="mtx">~${s.est_tp2} hari</div></div>
+        <div class="modal-tpi"><div class="mtn">TP3 (+${s.tp3_pct}%)</div><div class="mtv">Rp${s.tp3.toLocaleString('id-ID')}</div><div class="mtx">~${s.est_tp3} hari</div></div>
       </div>
-      <div style="margin-top:10px;font-size:10px;color:#888;">📌 ${s.gaya} · MA20: Rp${s.ma20.toLocaleString('id-ID')} · RSI: ${s.rsi} · ADX: ${s.adx}</div>
+      <div style="margin-top:10px;font-size:10px;color:#888;">${s.gaya} · MA20: Rp${s.ma20.toLocaleString('id-ID')} · RSI: ${s.rsi} · ADX: ${s.adx}</div>
     `;
   } catch(e) {
-    overlay.querySelector('.modal-box').innerHTML = '<p style="color:#dc2626;text-align:center;padding:20px;">⚠️ Gagal memuat data</p>';
+    overlay.querySelector('.modal-box').innerHTML = '<p style="color:#dc2626;text-align:center;padding:20px;"> Gagal memuat data</p>';
   }
 }
 
@@ -876,14 +876,14 @@ function renderBatch(data) {
 
   // Header + quick buttons — centered to match card width
   let h = `<div style="max-width:980px;margin:0 auto;">
-    <h3 style="margin-bottom:10px;font-size:14px;">📊 Rekomendasi — 3 Jalur Analisis</h3>
+    <h3 style="margin-bottom:10px;font-size:14px;">Rekomendasi — 3 Jalur Analisis</h3>
     <div class="quick-btns">
       ${POPULAR.map(k => `<button onclick="searchSingle('${k}')">${k}</button>`).join('')}
-      <button style="border-color:#059669;color:#059669;font-weight:600" onclick="reloadTab()">🔄 Refresh</button>
+      <button style="border-color:#059669;color:#059669;font-weight:600" onclick="reloadTab()">Refresh</button>
     </div>
     <div class="gaya-filter" style="margin-bottom:10px;">
       ${['Semua','Intraday','Swing','Position'].map(g => `
-        <button class="gaya-btn ${recFilter === g ? 'active' : ''}" onclick="setRecFilter('${g}')">${g === 'Semua' ? '📋 Semua' : g === 'Intraday' ? '⚡ Intraday' : g === 'Swing' ? '🔁 Swing' : '🏦 Position'}</button>
+        <button class="gaya-btn ${recFilter === g ? 'active' : ''}" onclick="setRecFilter('${g}')">${g === 'Semua' ? 'Semua' : g === 'Intraday' ? 'Intraday' : g === 'Swing' ? 'Swing' : 'Position'}</button>
       `).join('')}
     </div>
   </div>`;
@@ -907,7 +907,7 @@ function renderBatch(data) {
       <span class="rs-price">Rp${d.harga.toLocaleString('id-ID')} ${ch}${d.change_1d.toFixed(2)}%</span>
       <span class="rs-spacer"></span>
       <span class="rs-g"><span class="rs-grade ${gcMap[d.grade]}"><span class="gr">grade</span> ${d.grade}</span></span>
-      <button class="rs-analisis-btn" onclick="event.stopPropagation();showAnalisisPopup('${d.kode}')">🔍 Analisis</button>
+      <button class="rs-analisis-btn" onclick="event.stopPropagation();showAnalisisPopup('${d.kode}')">Analisis</button>
     </div>`;
   });
   h += '</div>';
@@ -922,7 +922,7 @@ function setRecFilter(gaya) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// ⏰ BACKTEST TIME MACHINE
+//  BACKTEST TIME MACHINE
 // ══════════════════════════════════════════════════════════════════════════
 async function initBacktest() {
   try {
@@ -930,15 +930,15 @@ async function initBacktest() {
     const d = await r.json();
     document.getElementById('main').innerHTML = `
       <div class="bt-controls">
-        <label style="font-size:12px;font-weight:600;color:#555;">📅 Tanggal Mulai:</label>
+        <label style="font-size:12px;font-weight:600;color:#555;">Tanggal Mulai:</label>
         <select id="btDate">${d.dates.map(dt => `<option value="${dt}">${dt}</option>`).join('')}</select>
-        <label style="font-size:12px;font-weight:600;color:#555;">⏱ Range:</label>
+        <label style="font-size:12px;font-weight:600;color:#555;">Range:</label>
         <select id="btHorizon">
           <option value="5">5 Hari</option><option value="10">10 Hari</option>
           <option value="15">15 Hari</option><option value="20" selected>20 Hari</option><option value="30">30 Hari</option>
         </select>
-        <button class="btn-screen" onclick="btScreen()">🔍 Screen BUY</button>
-        <button class="btn-ff" id="btnFF" onclick="btFastForward()" disabled>⏩ Cek Hasil Aktual</button>
+        <button class="btn-screen" onclick="btScreen()">Screen BUY</button>
+        <button class="btn-ff" id="btnFF" onclick="btFastForward()" disabled>Cek Hasil Aktual</button>
       </div>
       <div id="btResult">
         <div style="text-align:center;padding:60px;color:#999;">
@@ -946,7 +946,7 @@ async function initBacktest() {
           <p style="font-size:11px;color:#aaa;">Sistem akan menghitung scoring & proyeksi TP untuk 42 saham</p>
         </div>
       </div>`;
-  } catch(e) { document.getElementById('main').innerHTML = '<div class="error">⚠️ Gagal memuat data historis</div>'; }
+  } catch(e) { document.getElementById('main').innerHTML = '<div class="error"> Gagal memuat data historis</div>'; }
 }
 
 async function btScreen() {
@@ -960,7 +960,7 @@ async function btScreen() {
     const d = await r.json();
     btData = d;
     renderBacktest(d, false);
-  } catch(e) { document.getElementById('btResult').innerHTML = '<div class="error">⚠️ Gagal</div>'; }
+  } catch(e) { document.getElementById('btResult').innerHTML = '<div class="error"> Gagal</div>'; }
 }
 
 function btFastForward() { btShowing = true; if (btData) renderBacktest(btData, true); }
@@ -971,9 +971,9 @@ function renderBacktest(d, show) {
 
   // --- Summary bar ---
   let sumHtml = `<div class="bt-summary">
-    <div class="bt-stat"><div class="bts-l">📅 Tanggal</div><div class="bts-v" style="font-size:14px">${d.date}</div></div>
-    <div class="bt-stat"><div class="bts-l">⏱ Range</div><div class="bts-v" style="font-size:14px;color:#1d4ed8">${hz} Hari</div></div>
-    <div class="bt-stat"><div class="bts-l">🟢 Sinyal BUY</div><div class="bts-v" style="color:#059669">${data.length} saham</div></div>`;
+    <div class="bt-stat"><div class="bts-l">Tanggal</div><div class="bts-v" style="font-size:14px">${d.date}</div></div>
+    <div class="bt-stat"><div class="bts-l">Range</div><div class="bts-v" style="font-size:14px;color:#1d4ed8">${hz} Hari</div></div>
+    <div class="bt-stat"><div class="bts-l">Sinyal BUY</div><div class="bts-v" style="color:#059669">${data.length} saham</div></div>`;
 
   if (show && data.length > 0) {
     // fwd is stored directly on each stock object (not nested per horizon)
@@ -988,29 +988,29 @@ function renderBacktest(d, show) {
 
     sumHtml += `
       <div class="bt-stat" style="border-left:3px solid #059669">
-        <div class="bts-l">✅ Win (${hz}H)</div>
+        <div class="bts-l">Win (${hz}H)</div>
         <div class="bts-v" style="color:#059669;font-size:16px">${wins}/${withFwd.length}</div>
       </div>
       <div class="bt-stat" style="border-left:3px solid #1d4ed8">
-        <div class="bts-l">📈 Avg Ret</div>
+        <div class="bts-l">Avg Ret</div>
         <div class="bts-v" style="color:${avgRet >= 0 ? '#059669' : '#dc2626'};font-size:16px">${avgRet >= 0 ? '+' : ''}${avgRet}%</div>
       </div>
       <div class="bt-stat" style="border-left:3px solid #8b5cf6">
-        <div class="bts-l">🎯 TP1/2/3</div>
+        <div class="bts-l">TP1/2/3</div>
         <div class="bts-v" style="color:#8b5cf6;font-size:14px">${tp1}/${tp2}/${tp3}</div>
       </div>`;
   }
   sumHtml += '</div>';
 
   if (data.length === 0) {
-    document.getElementById('btResult').innerHTML = sumHtml + '<div style="text-align:center;padding:40px;color:#999;">😔 Tidak ada sinyal BUY di tanggal ini</div>';
+    document.getElementById('btResult').innerHTML = sumHtml + '<div style="text-align:center;padding:40px;color:#999;">Tidak ada sinyal BUY di tanggal ini</div>';
     return;
   }
 
   // --- Result table ---
   let table = `<div class="bt-table-wrap"><table><thead><tr>
     <th>#</th><th>Kode</th><th>Skor</th><th>Harga</th>
-    <th>Range Entry</th><th>Gaya</th><th>🛑 SL</th><th>TP1</th><th>TP2</th><th>TP3</th>`;
+    <th>Range Entry</th><th>Gaya</th><th>SL</th><th>TP1</th><th>TP2</th><th>TP3</th>`;
   if (show) table += '<th>Harga Akhir</th><th>Return</th><th>TP Hit</th>';
   table += '</tr></thead><tbody>';
 
@@ -1025,11 +1025,11 @@ function renderBacktest(d, show) {
       if (f) {
         rc = f.win ? 'bw' : 'bl';
         const badges = [
-          f.tp1_hit ? '<span class="tp-hit">TP1 ✅</span>' : '<span class="tp-miss">TP1</span>',
-          f.tp2_hit ? '<span class="tp-hit">TP2 ✅</span>' : '<span class="tp-miss">TP2</span>',
-          f.tp3_hit ? '<span class="tp-hit">TP3 ✅</span>' : '<span class="tp-miss">TP3</span>',
+          f.tp1_hit ? '<span class="tp-hit">TP1</span>' : '<span class="tp-miss">TP1</span>',
+          f.tp2_hit ? '<span class="tp-hit">TP2</span>' : '<span class="tp-miss">TP2</span>',
+          f.tp3_hit ? '<span class="tp-hit">TP3</span>' : '<span class="tp-miss">TP3</span>',
         ];
-        oc = `<td><b>Rp${f.price_fwd.toLocaleString('id-ID')}</b><br><span style="font-size:9px;color:#888;">📅 ${f.end_date}</span></td>
+        oc = `<td><b>Rp${f.price_fwd.toLocaleString('id-ID')}</b><br><span style="font-size:9px;color:#888;">${f.end_date}</span></td>
               <td style="font-weight:700;color:${f.ret_pct >= 0 ? '#059669' : '#dc2626'}">${f.ret_pct >= 0 ? '+' : ''}${f.ret_pct}%</td>
               <td>${badges.join(' ')}</td>`;
       } else {
@@ -1054,8 +1054,8 @@ function renderBacktest(d, show) {
 
   table += '</tbody></table></div>';
   table += show
-    ? '<div class="tooltip">🟢=naik 🔴=turun · TP ✅=take profit tercapai</div>'
-    : '<div class="tooltip">💡 Klik <b>⏩ Cek Hasil Aktual</b> untuk melihat return riil</div>';
+    ? '<div class="tooltip">Hijau=naik, Merah=turun · TP =take profit tercapai</div>'
+    : '<div class="tooltip">Klik <b>Cek Hasil Aktual</b> untuk melihat return riil</div>';
 
   document.getElementById('btResult').innerHTML = sumHtml + table;
 }

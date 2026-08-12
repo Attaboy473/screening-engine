@@ -77,9 +77,9 @@ def safe(value, default: float = 0.0) -> float:
 # This is the heart of the application. It calculates a 0–100 composite score
 # by averaging three sub-scores:
 #
-#   🔵 Teknikal (max 100)  — 9 indicators: MA, RSI, MACD, BB, ATR, Stoch, ADX, EMA, Vol
-#   🟠 Momentum (max 100)  — 5 signals: NR7, BB Squeeze, Volume Spike, Return, Near High
-#   🟢 Fundamental (max 100)— 7 ratios: PER, PBV, ROE, Profit Margin, Revenue Growth, DER, Div Yield
+#   Teknikal (max 100)  — 9 indicators: MA, RSI, MACD, BB, ATR, Stoch, ADX, EMA, Vol
+#   Momentum (max 100)  — 5 signals: NR7, BB Squeeze, Volume Spike, Return, Near High
+#   Fundamental (max 100)— 7 ratios: PER, PBV, ROE, Profit Margin, Revenue Growth, DER, Div Yield
 #
 #   Composite = (Teknikal + Momentum + Fundamental) / 3  →  0–100 scale
 #
@@ -160,9 +160,9 @@ def calc_scores(
     # Harga vs MA20
     if latest > ma20:
         tek += 13
-        t_details.append({"indikator": "Harga > MA20", "signal": "—", "skor": 13, "max": 13})
+        t_details.append({"indikator": "Harga > MA20", "signal": f"Di atas MA20 ({ma20:.0f})", "skor": 13, "max": 13})
     else:
-        t_details.append({"indikator": "Harga > MA20", "signal": "—", "skor": 0, "max": 13})
+        t_details.append({"indikator": "Harga > MA20", "signal": f"Di bawah MA20 ({ma20:.0f})", "skor": 0, "max": 13})
 
     # Golden Cross / Death Cross (MA20 vs MA50)
     if ma20 > ma50:
@@ -236,9 +236,9 @@ def calc_scores(
     # EMA20
     if latest > ema20:
         tek += 5
-        t_details.append({"indikator": "Harga > EMA20", "signal": "—", "skor": 5, "max": 5})
+        t_details.append({"indikator": "Harga > EMA20", "signal": f"Di atas EMA20 ({ema20:.0f})", "skor": 5, "max": 5})
     else:
-        t_details.append({"indikator": "Harga > EMA20", "signal": "—", "skor": 0, "max": 5})
+        t_details.append({"indikator": "Harga > EMA20", "signal": f"Di bawah EMA20 ({ema20:.0f})", "skor": 0, "max": 5})
 
     # Volume Ratio (latest vs average)
     if vr >= 1.3:
@@ -261,24 +261,24 @@ def calc_scores(
         mom += 25
         m_details.append({"indikator": "NR7", "signal": "Potensi breakout", "skor": 25, "max": 25})
     else:
-        m_details.append({"indikator": "NR7", "signal": "—", "skor": 0, "max": 25})
+        m_details.append({"indikator": "NR7", "signal": "Tidak terdeteksi", "skor": 0, "max": 25})
 
     # Bollinger Band Squeeze Breakout
     bbw = safe((bb_u - bb_l) / ((bb_u + bb_l) / 2) * 100 if (bb_u + bb_l) > 0 else 0)
     if bbw > 3 and latest > ma20:
         mom += 20
-        m_details.append({"indikator": "BB Squeeze Breakout", "signal": "—", "skor": 20, "max": 20})
+        m_details.append({"indikator": "BB Squeeze Breakout", "signal": f"BBW {bbw:.1f}% > 3%", "skor": 20, "max": 20})
     else:
-        m_details.append({"indikator": "BB Squeeze Breakout", "signal": "—", "skor": 0, "max": 20})
+        m_details.append({"indikator": "BB Squeeze Breakout", "signal": f"BBW {bbw:.1f}% — tidak squeeze", "skor": 0, "max": 20})
 
     # Volume Spike (5-day > 1.5× 5-day prior)
     v5 = safe(np.mean(volume[-5:]))
     v10 = safe(np.mean(volume[-10:-5]))
     if v10 > 0 and v5 / v10 > 1.5:
         mom += 20
-        m_details.append({"indikator": "Volume Spike", "signal": "Lonjakan", "skor": 20, "max": 20})
+        m_details.append({"indikator": "Volume Spike", "signal": f"Vol naik {v5/v10:.1f}x vs baseline", "skor": 20, "max": 20})
     else:
-        m_details.append({"indikator": "Volume Spike", "signal": "—", "skor": 0, "max": 20})
+        m_details.append({"indikator": "Volume Spike", "signal": f"Vol normal ({v5/v10:.1f}x)", "skor": 0, "max": 20})
 
     # Return 5-day / 20-day
     r5  = safe((close[-1] / close[-6]  - 1) * 100) if n >= 6  else 0
@@ -292,9 +292,9 @@ def calc_scores(
     # Near 20-day High (price within 95% of recent high)
     if n >= 20 and close[-1] > np.max(close[-20:]) * .95:
         mom += 10
-        m_details.append({"indikator": "Near High", "signal": "—", "skor": 10, "max": 10})
+        m_details.append({"indikator": "Near High", "signal": f"{((close[-1]/np.max(close[-20:]))*100):.0f}% dari high 20H", "skor": 10, "max": 10})
     else:
-        m_details.append({"indikator": "Near High", "signal": "—", "skor": 0, "max": 10})
+        m_details.append({"indikator": "Near High", "signal": "Jauh dari high 20H", "skor": 0, "max": 10})
 
     # --------------------------------------------------------------------------
     # 3) FUNDAMENTAL SCORING (7 ratios, max 100 points)
@@ -363,7 +363,7 @@ def calc_scores(
         elif dy > 0:
             f_score += 2; f_details.append({"indikator": f"Div Yield ({dy:.1f}%)", "signal": " Ada", "skor": 2, "max": 5})
         else:
-            f_details.append({"indikator": "Div Yield", "signal": "—", "skor": 0, "max": 5})
+            f_details.append({"indikator": "Div Yield", "signal": "Tidak ada dividen", "skor": 0, "max": 5})
 
         # DER (Debt-to-Equity Ratio)
         if der <= 0.5:
@@ -555,19 +555,19 @@ async def ihsg_api():
         foreign_label = f"Net Flow ~{'+' if net_flow>0 else ''}{net_flow:.0f}% cap-weighted" if movers else "—"
         sentiment_score = min(100, max(0, 50 + net_flow * 5))
         if sentiment_score >= 70:
-            sent = "Greed 🟢"
+            sent = "Greed"
         elif sentiment_score >= 40:
-            sent = "Neutral 🟡"
+            sent = "Neutral"
         else:
-            sent = "Fear 🔴"
+            sent = "Fear"
         tech_outlook = st.split("(")[0].strip()
-        tech_icon = "🟢" if "Hijau" in tech_outlook else ("🟡" if "Kuning" in tech_outlook else "🔴")
+        tech_icon = "Hijau" if "Hijau" in tech_outlook else ("Kuning" if "Kuning" in tech_outlook else "Merah")
 
         overview = {
-            "breadth":   f"🟢 {up} Naik  🔴 {down} Turun  ⚪ {unchanged} Tetap",
+            "breadth":   f"{up} Naik  {down} Turun  {unchanged} Tetap",
             "foreign":   foreign_label,
             "sentiment": f"{sentiment_score}/100 {sent}",
-            "technical": f"{tech_icon} {tech_outlook}",
+            "technical": f"{tech_icon} — {tech_outlook}",
         }
 
         return {
@@ -717,7 +717,7 @@ def init_historical():
     global HISTORICAL_CACHE, IHsgHISTORICAL
     if HISTORICAL_CACHE:
         return
-    print("📥 Downloading historical data for Backtest (Jan 2024 – Feb 2026)...")
+    print("Downloading historical data for Backtest (Jan 2024 – Feb 2026)...")
     with ThreadPoolExecutor(8) as pool:
         futures = {}
         for k in TICKERS_42:
@@ -881,5 +881,5 @@ app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
 
 if __name__ == "__main__":
     import uvicorn
-    print("🚀 Screening Engine → http://localhost:8000")
+    print("Screening Engine → http://localhost:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)
