@@ -39,16 +39,49 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(title="Screening Engine")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-# --- Universe: 42 IDX Stocks across multiple sectors ---
+# --- Universe: ~85 IDX Stocks across multiple sectors ---
+# Filter: saham dengan rata-rata volume harian ≥ 1M lembar
+MIN_DAILY_VOLUME = 1_000_000
+
 POPULAR = [
     "BBCA", "BBRI", "BMRI", "TLKM", "ASII", "BBNI", "UNVR", "GOTO",
     "ANTM", "ADRO", "ICBP", "MDKA"
 ]
-TICKERS_42 = POPULAR + [
+TICKERS = POPULAR + [
+    # Existing 30
     "INDF", "CPIN", "KLBF", "UNTR", "PTBA", "BRIS", "ISAT", "INCO",
     "EXCL", "SIDO", "ARTO", "HRUM", "NCKL", "BRMS", "SMGR", "PWON",
     "TOWR", "DSSA", "AMRT", "ACES", "MAPI", "INTP", "MEDC", "PGAS",
-    "BSDE", "CTRA", "ERAA", "BRPT", "CUAN", "BUKA"
+    "BSDE", "CTRA", "ERAA", "BRPT", "CUAN", "BUKA",
+    # New ~43 — LQ45, IDX30, KOMPAS100 picks
+    # Banking & Finance
+    "BBTN", "BREN", "BNGA", "MEGA",
+    # Energy & Mining
+    "ITMG", "ESSA", "AKRA", "TINS", "MBMA",
+    # Telco & Tech
+    "MTEL", "TBIG", "EMTK",
+    # Consumer Goods
+    "MYOR", "HMSP", "GGRM", "ULTJ", "JPFA", "MAIN", "STTP",
+    # Property & Real Estate
+    "SMRA", "LPKR", "PANI", "DMAS",
+    # Infrastructure & Construction
+    "JSMR", "CMNP",
+    # Automotive
+    "IMAS", "DRMA",
+    # Media
+    "MNCN", "SCMA",
+    # Healthcare
+    "HEAL", "MIKA", "SILO",
+    # Transport & Logistics
+    "RAJA", "BIRD", "ASSA",
+    # Financial Services (non-bank)
+    "ADMR", "BFIN",
+    # Agriculture & Plantation
+    "AALI", "LSIP",
+    # Industrial
+    "PTPP", "WIKA",
+    # Retail & Distribution
+    "RALS", "LPPF",
 ]
 
 # --- Lazy-loaded caches (initialized on first access) ---
@@ -458,6 +491,7 @@ def calc_scores(
         "gaya": gaya, "avg_val_20": safe(avg_val),
         "change_1d": safe((close[-1] / close[-2] - 1) * 100) if n >= 2 else 0,
         "change_5d": safe((close[-1] / close[-6] - 1) * 100) if n >= 6 else 0,
+        "avg_volume": safe(va),       # Average daily volume (20 days)
     }
 
 
@@ -627,14 +661,17 @@ async def screener_api(kodes: str = Query(None)):
     Usage: /api/screener?kodes=BBCA,BBRI,TLKM
     """
     if not kodes:
-        kodes = ",".join(POPULAR)
+        kodes = ",".join(TICKERS)
     tickers = [k.strip().upper() for k in kodes.split(",") if k.strip()]
     results = []
 
     with ThreadPoolExecutor(6) as pool:
         futures = {pool.submit(lambda c=c: analyze_quick(c)): c for c in tickers}
         for f in as_completed(futures):
-            results.append(f.result())
+            r = f.result()
+            # Filter: hanya tampilkan saham dengan volume ≥ 1M lembar/hari
+            if r.get("avg_volume", 0) >= MIN_DAILY_VOLUME:
+                results.append(r)
 
     results.sort(key=lambda x: x.get("score", 0) if "score" in x else 0, reverse=True)
     return {"ok": True, "count": len(results), "data": results}
@@ -720,7 +757,7 @@ def init_historical():
     print("Downloading historical data for Backtest (Jan 2024 – Feb 2026)...")
     with ThreadPoolExecutor(8) as pool:
         futures = {}
-        for k in TICKERS_42:
+        for k in TICKERS:
             futures[pool.submit(
                 lambda c=k: yf.Ticker(f"{c}.JK").history(
                     start="2024-01-01", end="2026-02-01", auto_adjust=False
